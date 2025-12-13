@@ -81,7 +81,7 @@ export class AuthService {
             if(referralProfile!=null){
                 const id=uuidv4()
                 const ref=new ReferralEntity()
-                ref.id=id
+                ref.referral_id =id
                 ref.referral_uid=referralProfile.uid
                 ref.referree_uid=uid;
                 ref.referral_created_at=Date.now()
@@ -92,18 +92,22 @@ export class AuthService {
                 const referrals = await this.userService.getReferrals(referralProfile.uid)
                 this.logger.debug(`User ${referralProfile.uid} now has ${referrals.length} referrals.`);
                 const miningRecord=await this.productService.getMiningRecords(referralProfile.uid)
-                const miningDto=miningRecord.at(0)
-                if(miningDto!=null){
-                    this.logger.debug(`Changing hash rate for user: ${referralProfile.uid}`);
-                    const hashRate=ProductUtils.getHashRate(referrals.length)
-                    const miningEntity = miningDto.mining
-                    miningEntity.hash_rate=hashRate.toString()
-                    const miningRepo = manager.getRepository(MiningEntity);
-                    await miningRepo.save(miningEntity);
-                    this.logger.debug(`Hash rate updated to ${hashRate} for user: ${referralProfile.uid}`);
-                }else{
-                    this.logger.debug(`No mining record found for user: ${referralProfile.uid}. No hash rate change applied.`);
+                if(miningRecord.length!==null){
+                    this.logger.debug(`Mining records found for user: ${referralProfile.uid}`);
+                    const miningDto = miningRecord.at(0)
+                    if (miningDto != null) {
+                        this.logger.debug(`Changing hash rate for user: ${referralProfile.uid}`);
+                        const hashRate = ProductUtils.getHashRate(referrals.length)
+                        const miningEntity = miningDto.mining
+                        miningEntity.hash_rate = hashRate.toString()
+                        const miningRepo = manager.getRepository(MiningEntity);
+                        await miningRepo.save(miningEntity);
+                        this.logger.debug(`Hash rate updated to ${hashRate} for user: ${referralProfile.uid}`);
+                    } else {
+                        this.logger.debug(`No mining record found for user: ${referralProfile.uid}. No hash rate change applied.`);
+                    }
                 }
+               
             }
             return this.JwtService.sign({ uid: userEntity.uid, email: userEntity.email, roles: userEntity.roles });
         });

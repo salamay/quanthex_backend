@@ -1,5 +1,5 @@
 export class SubscriptionPayload {
-    id: string
+    sub_id: string
     uid: string
     email: string
     sub_type: string

@@ -3,7 +3,7 @@ import { Entity, PrimaryGeneratedColumn, Column, PrimaryColumn } from "typeorm";
 export class StakingEntity {
 
     @PrimaryColumn()
-    id: string;
+    staking_id: string;
     @Column()
     uid: string
     @Column()

@@ -5,7 +5,7 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 export class SubscriptionEntity {
 
     @PrimaryColumn({unique:true,nullable:false})
-    id:string
+    sub_id:string
     @Column({nullable:false})
     uid:string
     @Column({ nullable: false })

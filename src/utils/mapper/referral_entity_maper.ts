@@ -6,7 +6,7 @@ export class ReferralEntityMapper {
     static toEntity(data: any): ReferralEntity {
         const referral = new ReferralEntity();
 
-        referral.id = data.id;
+        referral.referral_id = data.referral_id;
         referral.referral_uid = data.referral_uid;
         referral.referree_uid = data.referree_uid;
         referral.referral_created_at = data.referral_created_at;

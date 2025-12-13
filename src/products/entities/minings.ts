@@ -3,7 +3,7 @@ import{Column, Entity, PrimaryColumn} from "typeorm";
 export class MiningEntity{
 
     @PrimaryColumn()
-    id:string;
+    min_id:string;
     @Column()
     uid:string
     @Column()

@@ -53,9 +53,9 @@ export class ProductsService {
         payload.sub_status = Active
         return await this.dataSource.transaction(async manager => {
             try {
-                const id=MyUtils.generateUUID()
+                const sub_id=MyUtils.generateUUID()
                 // Ensure uid is set from the caller (do not trust payload.uid)
-                const data = { ...payload, uid,id } as Partial<SubscriptionEntity>;
+                const data = { ...payload, uid, sub_id } as Partial<SubscriptionEntity>;
 
                 // repository.create maps a plain object to an entity instance (runs transformers, etc.)
                 const entity = this.productsManager.subscriptionRepo.create(data as SubscriptionEntity);
@@ -77,12 +77,12 @@ export class ProductsService {
         const timestamp = Date.now();
         return await this.dataSource.transaction(async manager=>{
             const miningEntity=new MiningEntity();
-            miningEntity.id=MyUtils.generateUUID();
+            miningEntity.min_id =MyUtils.generateUUID();
             miningEntity.uid=uid;
             miningEntity.email=email;
             miningEntity.min_created_at=timestamp;
             miningEntity.min_updated_at=timestamp;
-            miningEntity.min_subscription_id=payload.id;
+            miningEntity.min_subscription_id = payload.sub_id;
             miningEntity.hash_rate=ProductUtils.LEVEL_FIVE_HASHRATE.toString();
             const miningRepo=manager.getRepository(MiningEntity);
             return await miningRepo.save(miningEntity);
@@ -94,8 +94,8 @@ export class ProductsService {
         const timestamp = Date.now();
         return await this.dataSource.transaction(async manager=>{
             try{
-                const id = MyUtils.generateUUID();
-                const data = { ...payload, uid, email, id, } as Partial<StakingEntity>;
+                const staking_id = MyUtils.generateUUID();
+                const data = { ...payload, uid, email, staking_id, } as Partial<StakingEntity>;
                 data.stake_created_at = timestamp;
                 data.stake_updated_at = timestamp;
                 data.staking_status = Active;
@@ -112,7 +112,7 @@ export class ProductsService {
     async getMiningRecords(uid: string):Promise<MiningDto[]>{
         console.log(`Fetching mining records for user: ${uid}`);
         const query=`SELECT s.*, m.* FROM subscriptions s 
-        LEFT JOIN minings m ON s.id = m.min_subscription_id 
+        LEFT JOIN minings m ON s.sub_id = m.min_subscription_id 
         WHERE s.uid = ? ORDER BY s.sub_created_at DESC`;
         const miningsDto: MiningDto[] = [];
         try{
@@ -121,8 +121,13 @@ export class ProductsService {
             for (const row of results) {
                 const miningDto = new MiningDto();
                 miningDto.subscription = row as SubscriptionEntity
-                const miningEntity=MiningMapper.toEntity(row)
-                miningDto.mining = miningEntity
+                let mining: MiningEntity | null = null;
+                miningDto.mining = null;
+                if (row['min_id']!=null) {
+                    mining =MiningMapper.toEntity(row)
+                    miningDto.mining = mining
+                }
+               
                 miningsDto.push(miningDto);
             }
             return miningsDto;

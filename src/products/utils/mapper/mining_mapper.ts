@@ -4,7 +4,7 @@ export class MiningMapper {
 
     static toEntity(row:any):MiningEntity{
         const miningEntity=new MiningEntity()
-        miningEntity.id=row.id
+        miningEntity.min_id = row.min_id
         miningEntity.uid = row.uid
         miningEntity.email=row.email
         miningEntity.min_created_at = row.min_created_at

@@ -3,7 +3,7 @@ import { Entity, PrimaryGeneratedColumn, Column, PrimaryColumn } from "typeorm";
 @Entity('referrals')
 export class ReferralEntity {
     @PrimaryColumn()
-    id: string
+    referral_id: string
     @Column({nullable: false})
     referral_uid: string
     @Column({ nullable: false })
