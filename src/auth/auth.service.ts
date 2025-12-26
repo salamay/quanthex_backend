@@ -16,6 +16,7 @@ import { ProductsService } from 'src/products/products.service';
 import { ProductUtils } from 'src/products/utils/product_utils';
 import { MiningMapper } from 'src/products/utils/mapper/mining_mapper';
 import { MiningEntity } from 'src/products/entities/minings';
+import { PushService } from './push.service';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +26,7 @@ export class AuthService {
         private JwtService: JwtService,
         private userService: UsersService,
         private productService: ProductsService,
+        private pushService: PushService
     ) { }
 
 
@@ -107,10 +109,31 @@ export class AuthService {
                         this.logger.debug(`No mining record found for user: ${referralProfile.uid}. No hash rate change applied.`);
                     }
                 }
-               
+            
             }
+            setImmediate(() => {
+                this.pushService.sendToToken(
+                    registerDto.device_token,
+                    'Welcome to Quanthex!',
+                    'Thank you for registering with Quanthex. We are excited to have you on board.',
+                ).catch(err => this.logger.error('Error sending welcome push notification', err));
+            });
             return this.JwtService.sign({ uid: userEntity.uid, email: userEntity.email, roles: userEntity.roles });
         });
+    }
+    async verifyUser(payload: any):Promise<any>{
+        const email=payload.email;
+        const password=payload.password;
+        const query="SELECT * FROM users WHERE email = ?";
+        const results:[]=await this.dataSource.manager.query(query, [email]);
+        if (results.length===0){
+            throw new UnprocessableEntityException('Invalid email or password');
+        }
+        const user = results.at(0) as UserEntity;
+        if(user.password!==password){
+            throw new UnprocessableEntityException('Password is incorrect');
+        }
+        return user;
     }
 
     async signIn(payload:any): Promise<any>{

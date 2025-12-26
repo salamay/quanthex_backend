@@ -24,12 +24,13 @@ export class ProductsService {
     ) {}
 
     async subscribeToProduct(uid: string, email: string, payload: SubscriptionPayload): Promise<SubscriptionEntity> {
-        // const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
-        // const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
-        // if (!status){
-        //     throw new UnprocessableEntityException('Transaction submission failed');
-        // }
-        const subType=payload.sub_package_name.split("_")[0];
+        const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
+        const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
+        if (!status){
+            throw new UnprocessableEntityException('Transaction submission failed');
+        }
+        payload.email = email;
+        const subType=payload.sub_type;
         if (subType === MINING){
             const subEntity: SubscriptionEntity= await this.createSubscriptionProduct(uid,email, payload);
             await this.createMiningRecord(uid, email, subEntity);

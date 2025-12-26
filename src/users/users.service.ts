@@ -11,6 +11,7 @@ import { LoggedDevice } from 'src/auth/entities/logged_device';
 import { ReferralEntity } from './entities/referral_entity';
 import { ReferralDto } from './dtos/referral_dto';
 import { ReferralEntityMapper } from 'src/utils/mapper/referral_entity_maper';
+import { ProfileMapper } from './mapper/profile_mapper';
 
 @Injectable()
 export class UsersService {
@@ -66,7 +67,7 @@ export class UsersService {
         for(const row of results){
             const referralDto=new ReferralDto()
             const referralEntity = ReferralEntityMapper.toEntity(row);
-            const referreeEntity= row as ProfileEntity
+            const referreeEntity = ProfileMapper.toEntity(row);
             referralDto.info=referralEntity
             referralDto.profile = referreeEntity
             referrals.push(referralDto)

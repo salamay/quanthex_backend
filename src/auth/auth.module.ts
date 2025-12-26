@@ -17,6 +17,9 @@ import { ProductsManager } from 'src/products/products_manager';
 import { SubscriptionEntity } from 'src/products/entities/subscription_entities';
 import { MiningEntity } from 'src/products/entities/minings';
 import { StakingEntity } from 'src/products/entities/staking_entity';
+import { OtpService } from './otp/otp_service';
+import { EmailApiService } from './email.service';
+import { PushService } from './push.service';
 
 @Module({
   imports: [
@@ -32,6 +35,6 @@ import { StakingEntity } from 'src/products/entities/staking_entity';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, UserManager, UsersService, MyJwtStrategy,ProductsService,ProductsManager]
+  providers: [AuthService, UserManager, UsersService, MyJwtStrategy, ProductsService, ProductsManager, OtpService, EmailApiService,PushService]
 })
 export class AuthModule {}

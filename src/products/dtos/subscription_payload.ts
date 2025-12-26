@@ -21,4 +21,5 @@ export class SubscriptionPayload {
     sub_package_name: string
     sub_duration: number
     sub_signed_tx: string
+    sub_price: number
 }

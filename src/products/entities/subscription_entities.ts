@@ -6,45 +6,48 @@ export class SubscriptionEntity {
 
     @PrimaryColumn({unique:true,nullable:false})
     sub_id:string
-    @Column({nullable:false})
+    @Column({nullable:true})
     uid:string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     email:string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_type: string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_chain_id: number
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_asset_contract: string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_asset_symbol: string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_asset_name: string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_asset_decimals: number
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_asset_image: string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_created_at: number
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_updated_at: number
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_status: string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_reward_contract: string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_reward_chain_id: number
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_reward_asset_name: string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_reward_asset_symbol: string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_reward_asset_image: string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_reward_asset_decimals: number
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_package_name: string
-    @Column({ nullable: false })
+    @Column({ nullable: true })
     sub_duration: number
+    @Column({ nullable: true })
+    sub_price: number
+
 
 }
