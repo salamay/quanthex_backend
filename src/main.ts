@@ -4,6 +4,9 @@ import { JwtAuthGuard } from './auth/jwt/jwt_auth_guard';
 import { MyInterceptorsInterceptor } from './my_interceptors/my_interceptors.interceptor';
 
 async function bootstrap() {
+  (BigInt.prototype as any).toJSON = function () {
+    return this.toString();
+  };
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.useGlobalGuards(new JwtAuthGuard());

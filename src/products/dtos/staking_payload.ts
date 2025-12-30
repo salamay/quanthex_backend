@@ -5,9 +5,9 @@ export class StakingPayload {
         
         email: string
         
-        stake_created_at: number
+        stake_created_at: BigInt
         
-        stake_updated_at: number
+        stake_updated_at: BigInt
         
         staked_asset_symbol: string
         
@@ -38,4 +38,6 @@ export class StakingPayload {
         staking_reward_asset_decimals: number
         
         staking_reward_asset_image: string
+        signed_tx: string
+        rpc: string
 }

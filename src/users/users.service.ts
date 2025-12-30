@@ -27,8 +27,8 @@ export class UsersService {
 
     async getProfileByUid(uid: string) : Promise<ProfileEntity> {
         const query = "SELECT * FROM profiles WHERE uid = ?";
-    
-        const result = await this.entityManager.query(query, [uid]);
+        const userRepository = this.userManager.profileRepository;
+        const result = await userRepository.query(query, [uid]);
         if(!result||result.length===0){
             throw new NotFoundException("User not found")
         }

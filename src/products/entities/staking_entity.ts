@@ -8,10 +8,10 @@ export class StakingEntity {
     uid: string
     @Column()
     email: string
-    @Column()
-    stake_created_at: number
-    @Column()
-    stake_updated_at: number
+    @Column({ nullable: false, type: 'bigint' })
+    stake_created_at: BigInt
+    @Column({ nullable: false, type: 'bigint' })
+    stake_updated_at: BigInt
     @Column()
     staked_asset_symbol: string
     @Column()

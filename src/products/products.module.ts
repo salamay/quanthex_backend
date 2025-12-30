@@ -5,10 +5,11 @@ import { SubscriptionEntity } from './entities/subscription_entities';
 import { ProductsController } from './products.controller';
 import { ProductsManager } from './products_manager';
 import { StakingEntity } from './entities/staking_entity';
+import { WithdrawalEntity } from './entities/withdrawal_entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SubscriptionEntity, StakingEntity]),
+    TypeOrmModule.forFeature([SubscriptionEntity, StakingEntity, WithdrawalEntity]),
   ],
   providers: [ProductsService, ProductsManager],
   controllers: [ProductsController]

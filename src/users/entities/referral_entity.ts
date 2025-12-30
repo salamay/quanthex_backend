@@ -8,8 +8,8 @@ export class ReferralEntity {
     referral_uid: string
     @Column({ nullable: false })
     referree_uid: string
-    @Column({ nullable: false })
-    referral_created_at: number
-    @Column({ nullable: false })
-    referral_updated_at: number
+    @Column({ nullable: false, type: 'bigint' })
+    referral_created_at: BigInt
+    @Column({ nullable: false, type: 'bigint' })
+    referral_updated_at: BigInt
 }

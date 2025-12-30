@@ -8,10 +8,10 @@ export class MiningEntity{
     uid:string
     @Column()
     email:string
-    @Column()
-    min_created_at:number
-    @Column()
-    min_updated_at:number
+    @Column({ nullable: false, type: 'bigint' })
+    min_created_at: BigInt
+    @Column({ nullable: false, type: 'bigint' })
+    min_updated_at: BigInt
     @Column()
     min_subscription_id:string
     @Column()

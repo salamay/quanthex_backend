@@ -9,10 +9,10 @@ export class ProfileEntity {
     account_status: string
     @Column({ nullable: false })
     roles   : string
-    @Column({ nullable: false })
-    profile_created_at: number
-    @Column({ nullable: false })
-    profile_updated_at: number
+    @Column({ nullable: false,type:'bigint' })
+    profile_created_at: BigInt
+    @Column({ nullable: false,type:'bigint' })
+    profile_updated_at: BigInt
     @Column({ nullable: true })
     pin: string
     @Column({ nullable: false })

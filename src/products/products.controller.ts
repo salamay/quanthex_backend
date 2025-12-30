@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Request, UnauthorizedException } from '@nestjs/common';
 import { ProductsService } from './products.service';
+import { WithdrawalPayload } from './dtos/withdrawal_payload';
 
 @Controller('products')
 export class ProductsController {
@@ -43,5 +44,23 @@ export class ProductsController {
               throw new UnauthorizedException('Missing user id on request');
             }
         return await this.productsService.getStakingRecords(uid);
+    }
+
+    @Post('withdraw')
+    async createWithdrawal(@Request() req, @Body() payload: WithdrawalPayload):Promise<any>{
+        const { uid, email} = req.user;
+            if (!uid) {
+              throw new UnauthorizedException('Missing user id on request');
+            }
+        return await this.productsService.createWithdrawalRequest(uid, email, payload);
+    }
+
+    @Get('withdrawals')
+    async getUserWithdrawals(@Request() req):Promise<any>{
+        const { uid, email} = req.user;
+            if (!uid) {
+              throw new UnauthorizedException('Missing user id on request');
+            }
+        return await this.productsService.getWithdrawalRecords(uid);
     }
 }

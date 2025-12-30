@@ -24,10 +24,10 @@ export class SubscriptionEntity {
     sub_asset_decimals: number
     @Column({ nullable: true })
     sub_asset_image: string
-    @Column({ nullable: true })
-    sub_created_at: number
-    @Column({ nullable: true })
-    sub_updated_at: number
+    @Column({ nullable: false, type: 'bigint' })
+    sub_created_at: BigInt
+    @Column({ nullable: false, type: 'bigint' })
+    sub_updated_at: BigInt
     @Column({ nullable: true })
     sub_status: string
     @Column({ nullable: true })
@@ -44,8 +44,8 @@ export class SubscriptionEntity {
     sub_reward_asset_decimals: number
     @Column({ nullable: true })
     sub_package_name: string
-    @Column({ nullable: true })
-    sub_duration: number
+    @Column({ nullable: false, type: 'bigint' })
+    sub_duration: BigInt
     @Column({ nullable: true })
     sub_price: number
 

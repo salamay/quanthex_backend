@@ -9,8 +9,8 @@ export class LoggedDevice {
     device_token: string
     @Column({nullable: false})
     user_id: string
-    @Column({nullable: false})
-    logged_at: number
+    @Column({ nullable: false, type: 'bigint' })
+    logged_at: BigInt
     @Column({nullable: false})
     device_type: string
 }

@@ -13,8 +13,8 @@ export class UserEntity{
     device_token: string
     @Column({ nullable: false })
     roles: string
-    @Column({ nullable: false })
-    user_created_at: number
+    @Column({ nullable: false, type:'bigint' })
+    user_created_at: BigInt
     @Column({ nullable: false })
     reg_via: string
     

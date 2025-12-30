@@ -17,6 +17,7 @@ import { ProductsModule } from './products/products.module';
 import { SubscriptionEntity } from './products/entities/subscription_entities';
 import { MiningEntity } from './products/entities/minings';
 import { StakingEntity } from './products/entities/staking_entity';
+import { WithdrawalEntity } from './products/entities/withdrawal_entity';
 import { ReferralEntity } from './users/entities/referral_entity';
 
 @Module({
@@ -35,8 +36,9 @@ import { ReferralEntity } from './users/entities/referral_entity';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities:[
-          UserEntity, ProfileEntity, LoggedDevice, SubscriptionEntity, MiningEntity, StakingEntity, ReferralEntity
+        bigNumberStrings: true,
+        entities:[                
+          UserEntity, ProfileEntity, LoggedDevice, SubscriptionEntity, MiningEntity, StakingEntity, WithdrawalEntity, ReferralEntity
         ],
         synchronize: false,
       })

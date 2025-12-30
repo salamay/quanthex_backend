@@ -48,7 +48,7 @@ export class AuthService {
             userEntity.account_status = 'active';
             userEntity.device_token = registerDto.device_token;
             userEntity.roles = ROLE_USER;
-            userEntity.user_created_at = Date.now();
+            userEntity.user_created_at = BigInt(Date.now());
             userEntity.reg_via = registerDto.reg_via;
             try {
                 await userRepository.save(userEntity);
@@ -61,8 +61,8 @@ export class AuthService {
             profileEntity.email = userEntity.email;
             profileEntity.account_status = userEntity.account_status;
             profileEntity.roles = userEntity.roles;
-            profileEntity.profile_created_at = Date.now();
-            profileEntity.profile_updated_at = Date.now();
+            profileEntity.profile_created_at = BigInt(Date.now());
+            profileEntity.profile_updated_at = BigInt(Date.now());
             profileEntity.pin = null;
             profileEntity.referral_code = MyUtils.generateLetterCode(6);
             try {
@@ -75,7 +75,7 @@ export class AuthService {
             loggedDevice.device_id=registerDto.device_id;
             loggedDevice.device_token=registerDto.device_token;
             loggedDevice.user_id=uid;
-            loggedDevice.logged_at=Date.now();
+            loggedDevice.logged_at = BigInt(Date.now());
             loggedDevice.device_type=registerDto.device_type;
             const loggedDeviceRepo=manager.getRepository(LoggedDevice);
             await loggedDeviceRepo.save(loggedDevice);
@@ -86,8 +86,8 @@ export class AuthService {
                 ref.referral_id =id
                 ref.referral_uid=referralProfile.uid
                 ref.referree_uid=uid;
-                ref.referral_created_at=Date.now()
-                ref.referral_updated_at=Date.now()
+                ref.referral_created_at = BigInt(Date.now())
+                ref.referral_updated_at= BigInt(Date.now())
                 const referralRepository = manager.getRepository(ReferralEntity)
                 referralRepository.save(ref)
                 this.logger.debug(`Referral recorded: ${referralProfile.uid} referred ${uid}`);
@@ -155,7 +155,7 @@ export class AuthService {
         loggedDevice.device_id =device_id;
         loggedDevice.device_token = device_token;
         loggedDevice.user_id = user.uid;
-        loggedDevice.logged_at = Date.now();
+        loggedDevice.logged_at = BigInt(Date.now());
         loggedDevice.device_type = device_type;
         const loggedDeviceRepo = this.dataSource.manager.getRepository(LoggedDevice);
         await loggedDeviceRepo.save(loggedDevice);

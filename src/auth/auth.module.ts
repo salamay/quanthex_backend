@@ -20,11 +20,12 @@ import { StakingEntity } from 'src/products/entities/staking_entity';
 import { OtpService } from './otp/otp_service';
 import { EmailApiService } from './email.service';
 import { PushService } from './push.service';
+import { WithdrawalEntity } from 'src/products/entities/withdrawal_entity';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([UserEntity, ProfileEntity, LoggedDevice,ReferralEntity,SubscriptionEntity,MiningEntity,StakingEntity]),
+    TypeOrmModule.forFeature([UserEntity, ProfileEntity, LoggedDevice, ReferralEntity, SubscriptionEntity, MiningEntity, StakingEntity, WithdrawalEntity]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
