@@ -42,4 +42,10 @@ export class StakingEntity {
     staking_reward_asset_decimals: number
     @Column()
     staking_reward_asset_image: string
+    @Column({ nullable: false, type: 'bigint' })
+    duration: number
+    @Column({ nullable: false, type: 'bigint' })
+    end_date: number
+    @Column({ nullable: false, type: 'bigint' })
+    start_date: number
 }

@@ -40,4 +40,8 @@ export class StakingPayload {
         staking_reward_asset_image: string
         signed_tx: string
         rpc: string
+        duration: number
+        end_date: number
+        start_date: number
+      
 }
