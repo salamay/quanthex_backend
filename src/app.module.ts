@@ -19,6 +19,8 @@ import { MiningEntity } from './products/entities/minings';
 import { StakingEntity } from './products/entities/staking_entity';
 import { WithdrawalEntity } from './products/entities/withdrawal_entity';
 import { ReferralEntity } from './users/entities/referral_entity';
+import { NotificationModule } from './notification/notification.module';
+import { NotificationEntity } from './notification/entities/Notification_entity';
 
 @Module({
   imports: [
@@ -38,14 +40,15 @@ import { ReferralEntity } from './users/entities/referral_entity';
         database: configService.get<string>('DB_NAME'),
         bigNumberStrings: true,
         entities:[                
-          UserEntity, ProfileEntity, LoggedDevice, SubscriptionEntity, MiningEntity, StakingEntity, WithdrawalEntity, ReferralEntity
+          UserEntity, ProfileEntity, LoggedDevice, SubscriptionEntity, MiningEntity, StakingEntity, WithdrawalEntity, ReferralEntity, NotificationEntity
         ],
         synchronize: false,
       })
     }),
     UsersModule,
     AuthModule,
-    ProductsModule
+    ProductsModule,
+    NotificationModule
   ],
   controllers: [AppController],
   providers: [AppService],

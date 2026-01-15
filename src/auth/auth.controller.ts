@@ -17,10 +17,10 @@ export class AuthController {
         if (!email) {
             throw new Error('Email is required');
         }
-        const otp = this.otpService.generateRegOtpForEmail(email);
+        // const otp = this.otpService.generateRegOtpForEmail(email);
         
-        console.log(`Generated OTP for ${email}: ${otp}`);
-        await this.emailApi.sendOtpEmail(email, 'Registration OTP', otp);
+        // console.log(`Generated OTP for ${email}: ${otp}`);
+        // await this.emailApi.sendOtpEmail(email, 'Registration OTP', otp);
         return { success: true, message: 'OTP generated and sent' };
     }
 
@@ -30,10 +30,10 @@ export class AuthController {
         if (!registerationBody.email || !registerationBody.password) {
             throw new Error('Email and password are required');
         }
-        const isOtpValid = this.otpService.validateRegOtpForEmail(registerationBody.email, otp);
-        if (!isOtpValid) {
-            throw new NotFoundException('Invalid or expired OTP');
-        }
+        // const isOtpValid = this.otpService.validateRegOtpForEmail(registerationBody.email, otp);
+        // if (!isOtpValid) {
+        //     throw new NotFoundException('Invalid or expired OTP');
+        // }
         return await this.authService.registerUser(registerationBody);
     }
     
@@ -42,9 +42,9 @@ export class AuthController {
         if (!loginBody.email || !loginBody.password) {
             throw new Error('Email and password are required');
         }
-        const otp=this.otpService.generateSignOtpForEmail(loginBody.email);
-        console.log(`Generated OTP for ${loginBody.email}: ${otp}`);
-        await this.emailApi.sendOtpEmail(loginBody.email, 'Login OTP', otp);
+        // const otp=this.otpService.generateSignOtpForEmail(loginBody.email);
+        // console.log(`Generated OTP for ${loginBody.email}: ${otp}`);
+        // await this.emailApi.sendOtpEmail(loginBody.email, 'Login OTP', otp);
         await this.authService.verifyUser(loginBody);
         return { success: true, message: 'OTP generated and sent' };
     }
@@ -53,10 +53,10 @@ export class AuthController {
         if (!loginBody.email || !loginBody.password) {
             throw new UnprocessableEntityException('Email and password are required');
         }
-        const isOtpValid=this.otpService.validateSignOtpForEmail(loginBody.email,otp);
-        if(!isOtpValid){
-            throw new NotFoundException('Invalid or expired OTP');
-        }
+        // const isOtpValid=this.otpService.validateSignOtpForEmail(loginBody.email,otp);
+        // if(!isOtpValid){
+        //     throw new NotFoundException('Invalid or expired OTP');
+        // }
         return await this.authService.signIn(loginBody);
     }
 

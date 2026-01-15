@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
+import { getApps } from 'firebase-admin/app';
 
 @Injectable()
 export class PushService {
@@ -13,11 +14,15 @@ export class PushService {
 
   private init() {
     if (this.initialized) return;
-
+    // Check if Firebase is already initialized globally
+    if (admin.apps.length > 0) {
+      this.initialized = true;
+      this.logger.log('Firebase admin already initialized, reusing existing app');
+      return;
+    }
     const path = this.config.get<string>('FIREBASE_SERVICE_ACCOUNT_PATH');
 
     try {
-    
       if (path) {
         // load a local json file path (absolute or project-relative)
         // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -28,15 +33,15 @@ export class PushService {
         return;
       }
 
-      if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-        // Let the SDK pick up default credentials from environment
-        admin.initializeApp();
-        this.initialized = true;
-        this.logger.log('Firebase admin initialized with application default credentials');
-        return;
-      }
+      // if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      //   // Let the SDK pick up default credentials from environment
+      //   admin.initializeApp();
+      //   this.initialized = true;
+      //   this.logger.log('Firebase admin initialized with application default credentials');
+      //   return;
+      // }
 
-      this.logger.warn('No Firebase credentials provided; PushService not initialized.');
+      // this.logger.warn('No Firebase credentials provided; PushService not initialized.');
     } catch (err) {
       this.logger.error('Failed to initialize Firebase admin', err as any);
     }

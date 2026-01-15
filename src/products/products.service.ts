@@ -16,6 +16,11 @@ import { MiningMapper } from './utils/mapper/mining_mapper';
 import { ProductUtils } from './utils/product_utils';
 import { WithdrawalPayload } from './dtos/withdrawal_payload';
 import { WithdrawalEntity } from './entities/withdrawal_entity';
+import { NotificationEntity } from 'src/notification/entities/Notification_entity';
+import { NotificationService } from 'src/notification/notification.service';
+import { PushService } from 'src/auth/push.service';
+import { UsersService } from 'src/users/users.service';
+import { LoggedDevice } from 'src/auth/entities/logged_device';
 
 @Injectable()
 export class ProductsService {
@@ -23,6 +28,9 @@ export class ProductsService {
     constructor(
         private productsManager: ProductsManager,
         private dataSource: DataSource,
+        private notificationService: NotificationService,
+        private pushService: PushService,
+        private userService: UsersService,
     ) {}
 
     async subscribeToProduct(uid: string, email: string, payload: SubscriptionPayload): Promise<SubscriptionEntity> {
@@ -243,7 +251,23 @@ export class ProductsService {
                 // Delete the staking after withdrawal is created
                 await stakingRepo.delete({ staking_id: staking.staking_id });
                 console.log(`Staking ${staking.staking_id} deleted after withdrawal ${withdrawal_id} was created`);
-                
+                const notification: NotificationEntity = new NotificationEntity();
+                notification.noti_id = MyUtils.generateUUID();
+                notification.noti_user = uid;
+                notification.noti_title = 'Withdrawal Request Created';
+                notification.noti_description = `Withdrawal request for staking ${staking.staking_id} was created`;
+                notification.noti_type = 'withdrawal';
+                notification.noti_created_at = BigInt(timestamp);
+                notification.noti_updated_at = BigInt(timestamp);
+                notification.noti_seen = false;
+                await this.notificationService.createNotification(notification);
+                setImmediate(async () => {
+                    const user = await this.userService.getProfileByUid(uid);
+                    const loggedDeviceRepo = manager.getRepository(LoggedDevice);
+                    const devices: LoggedDevice[] = await loggedDeviceRepo.find({ where: { user_id: uid }, order: { logged_at: "DESC" } });
+                    const userToken = devices.at(0).device_token;
+                    await this.pushService.sendToToken(userToken, 'Withdrawal Request Created', `Withdrawal request for staking ${staking.staking_id} was created`);
+                });
                 return savedWithdrawal;
             }catch(err){
                 console.error('Error creating withdrawal request:', err);

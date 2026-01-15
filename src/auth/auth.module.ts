@@ -21,11 +21,13 @@ import { OtpService } from './otp/otp_service';
 import { EmailApiService } from './email.service';
 import { PushService } from './push.service';
 import { WithdrawalEntity } from 'src/products/entities/withdrawal_entity';
+import { NotificationService } from 'src/notification/notification.service';
+import { NotificationEntity } from 'src/notification/entities/Notification_entity';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    TypeOrmModule.forFeature([UserEntity, ProfileEntity, LoggedDevice, ReferralEntity, SubscriptionEntity, MiningEntity, StakingEntity, WithdrawalEntity]),
+    TypeOrmModule.forFeature([UserEntity, ProfileEntity, LoggedDevice, ReferralEntity, SubscriptionEntity, MiningEntity, StakingEntity, WithdrawalEntity, NotificationEntity]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -36,6 +38,6 @@ import { WithdrawalEntity } from 'src/products/entities/withdrawal_entity';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, UserManager, UsersService, MyJwtStrategy, ProductsService, ProductsManager, OtpService, EmailApiService,PushService]
+  providers: [AuthService, UserManager, UsersService, MyJwtStrategy, ProductsService, ProductsManager, OtpService, EmailApiService, PushService, NotificationService]
 })
 export class AuthModule {}
