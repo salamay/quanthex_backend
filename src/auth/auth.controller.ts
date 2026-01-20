@@ -59,5 +59,9 @@ export class AuthController {
         // }
         return await this.authService.signIn(loginBody);
     }
+    @Post("googleLogin")
+    async googleLogin(@Request() req, @Body() googleLoginBody): Promise<any> {
+        return await this.authService.googleLogin(googleLoginBody);
+    }
 
 }

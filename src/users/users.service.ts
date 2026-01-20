@@ -64,6 +64,7 @@ export class UsersService {
                        LEFT JOIN profiles p ON r.referree_uid = p.uid
                        WHERE referral_uid = ? `;
         const results: []=await this.userManager.referralRepository.query(query,[uid])
+        this.logger.debug(`Found ${results.length} referrals for user ${uid}`)
         for(const row of results){
             const referralDto=new ReferralDto()
             const referralEntity = ReferralEntityMapper.toEntity(row);
@@ -83,5 +84,18 @@ export class UsersService {
             this.logger.debug("Could not find user that this referral code belongs to")
         }
         return results.at(0)as ProfileEntity
+    }
+
+    async hasReferredSomeone(uid: string, referralCode: string): Promise<boolean> {
+        this.logger.debug(`Checking if user ${uid} has referred someone with referral code ${referralCode} before`);
+        try {
+            const query = "SELECT COUNT(*) as count FROM referrals WHERE referral_uid = ? AND referree_uid = ?";
+            const results: any[] = await this.userManager.referralRepository.query(query, [uid, referralCode]);
+            const count = results[0]?.count || 0;
+            return count > 0;
+        } catch (err) {
+            this.logger.error(`Error checking referrals for user ${uid} with referral code ${referralCode}:`, err);
+            throw new UnprocessableEntityException('An error occurred while checking referrals');
+        }
     }
 }

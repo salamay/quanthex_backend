@@ -48,6 +48,8 @@ export class SubscriptionEntity {
     sub_duration: BigInt
     @Column({ nullable: true })
     sub_price: number
+    @Column({ nullable: true })
+    sub_referral_code: string
 
 
 }

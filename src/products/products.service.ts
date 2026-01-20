@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, UnprocessableEntityException, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, UnprocessableEntityException, UnauthorizedException, NotFoundException, Logger } from '@nestjs/common';
 import { ProductsManager } from './products_manager';
 import { SubscriptionPayload } from './dtos/subscription_payload';
 import { SubscriptionEntity } from './entities/subscription_entities';
@@ -21,10 +21,13 @@ import { NotificationService } from 'src/notification/notification.service';
 import { PushService } from 'src/auth/push.service';
 import { UsersService } from 'src/users/users.service';
 import { LoggedDevice } from 'src/auth/entities/logged_device';
+import { NOTIFICATION_TYPE_MINING, NOTIFICATION_TYPE_STAKING, NOTIFICATION_TYPE_WITHDRAWAL } from 'src/utils/constants';
+import { ReferralEntity } from 'src/users/entities/referral_entity';
+import { ProfileEntity } from 'src/users/entities/profile_entity';
 
 @Injectable()
 export class ProductsService {
-
+    logger = new Logger(ProductsService.name);
     constructor(
         private productsManager: ProductsManager,
         private dataSource: DataSource,
@@ -34,6 +37,21 @@ export class ProductsService {
     ) {}
 
     async subscribeToProduct(uid: string, email: string, payload: SubscriptionPayload): Promise<SubscriptionEntity> {
+        const referralProfile: ProfileEntity = await this.userService.refferalCodeUser(payload.sub_referral_code)
+        if (referralProfile == null) {
+            throw new UnprocessableEntityException('Referral code not found');
+        }
+        const hasReferred = await this.userService.hasReferredSomeone(uid,referralProfile.uid);
+        if (hasReferred) {
+            throw new UnprocessableEntityException('You have already referred this user');
+        }
+        const user = await this.userService.getProfileByUid(uid);
+        if (user == null) {
+            throw new UnprocessableEntityException('User not found');
+        }
+        if (user.referral_code == payload.sub_referral_code) {
+            throw new UnprocessableEntityException('You cannot refer yourself');
+        }
         const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
         const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
         if (!status){
@@ -86,7 +104,7 @@ export class ProductsService {
     async createMiningRecord(uid:string,email:string,payload:SubscriptionEntity):Promise<MiningEntity>{
         console.log(`Creating mining record for user: ${uid}`);
         const timestamp = Date.now();
-        return await this.dataSource.transaction(async manager=>{
+        const miningEntity = await this.dataSource.transaction(async manager=>{
             const miningEntity=new MiningEntity();
             miningEntity.min_id =MyUtils.generateUUID();
             miningEntity.uid=uid;
@@ -98,6 +116,50 @@ export class ProductsService {
             const miningRepo=manager.getRepository(MiningEntity);
             return await miningRepo.save(miningEntity);
         })
+        const notification: NotificationEntity = new NotificationEntity();
+        notification.noti_id = MyUtils.generateUUID();
+        notification.noti_user = uid;
+        notification.noti_title = 'Mining Created';
+        notification.noti_description = `Your mining has been created successfully`;
+        notification.noti_type = NOTIFICATION_TYPE_MINING;
+        notification.noti_created_at = BigInt(timestamp);
+        notification.noti_updated_at = BigInt(timestamp);
+        notification.noti_seen = false;
+        await this.notificationService.createNotification(notification);
+        this.sendPushNotification(uid, 'Mining Created', `Your mining has been created successfully`, miningEntity);
+        const referralProfile: ProfileEntity = await this.userService.refferalCodeUser(payload.sub_referral_code)
+        if (referralProfile != null) {
+            const ref = new ReferralEntity()
+            ref.referral_id = MyUtils.generateUUID()
+            ref.referral_uid = uid
+            ref.referree_uid = referralProfile.uid;
+            ref.referral_created_at = BigInt(Date.now())
+            ref.referral_updated_at = BigInt(Date.now())
+            const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
+            await referralRepository.save(ref)
+            this.logger.debug(`Referral recorded: ${referralProfile.uid} referred ${uid}`);
+            const referrals = await this.userService.getReferrals(referralProfile.uid)
+            this.logger.debug(`User ${referralProfile.uid} now has ${referrals.length} referrals.`);
+            const miningRecord = await this.getMiningRecords(referralProfile.uid)
+            if (miningRecord.length !== null) {
+                this.logger.debug(`Mining records found for user: ${referralProfile.uid}`);
+                const miningDto = miningRecord.at(0)
+                if (miningDto != null) {
+                    this.logger.debug(`Changing hash rate for user: ${referralProfile.uid}`);
+                    const hashRate = ProductUtils.getHashRate(referrals.length)
+                    const miningEntity = miningDto.mining
+                    miningEntity.hash_rate = hashRate.toString()
+                    const miningRepo = this.dataSource.getRepository(MiningEntity);
+                    await miningRepo.save(miningEntity);
+                    this.sendPushNotification(referralProfile.uid, 'Hash Rate Updated', `Your hash rate has been updated to ${hashRate}`, miningEntity);
+                    this.logger.debug(`Hash rate updated to ${hashRate} for user: ${referralProfile.uid}`);
+                } else {
+                    this.logger.debug(`No mining record found for user: ${referralProfile.uid}. No hash rate change applied.`);
+                }
+            }
+
+        }
+        return miningEntity;
     }
 
     async createStakingRecord(uid: string, email: string, payload: StakingPayload): Promise<StakingEntity>{
@@ -107,7 +169,7 @@ export class ProductsService {
         if (!status) {
             throw new UnprocessableEntityException('Transaction submission failed');
         }
-        return await this.dataSource.transaction(async manager=>{
+        const stakingEntity = await this.dataSource.transaction(async manager=>{
             try{
                 const staking_id = MyUtils.generateUUID();
                 const data = { ...payload, uid, email, staking_id, } as Partial<StakingEntity>;
@@ -122,6 +184,19 @@ export class ProductsService {
                 throw new InternalServerErrorException('Failed to create staking');
             }
         })
+        const notification: NotificationEntity = new NotificationEntity();
+        notification.noti_id = MyUtils.generateUUID();
+        notification.noti_user = uid;
+        notification.noti_title = 'Staking Created';
+        notification.noti_description = `Your staking has been created successfully`;
+        notification.noti_type = NOTIFICATION_TYPE_STAKING;
+        notification.noti_created_at = BigInt(timestamp);
+        notification.noti_updated_at = BigInt(timestamp);
+        notification.noti_seen = false;
+        await this.notificationService.createNotification(notification);
+        this.sendPushNotification(uid, 'Staking Created', `Your staking has been created successfully`, stakingEntity);
+
+        return stakingEntity;
     }
 
     async getMiningRecords(uid: string):Promise<MiningDto[]>{
@@ -181,7 +256,7 @@ export class ProductsService {
     async createWithdrawalRequest(uid: string, email: string, payload: WithdrawalPayload): Promise<WithdrawalEntity>{
         console.log(`Creating withdrawal request for user: ${uid}, staking_id: ${payload.staking_id}`);
         const timestamp = Date.now();
-        return await this.dataSource.transaction(async manager=>{
+        const withdrawalEntity = await this.dataSource.transaction(async manager=>{
             try{
                 // Find the staking record
                 const stakingRepo = manager.getRepository(StakingEntity);
@@ -251,23 +326,6 @@ export class ProductsService {
                 // Delete the staking after withdrawal is created
                 await stakingRepo.delete({ staking_id: staking.staking_id });
                 console.log(`Staking ${staking.staking_id} deleted after withdrawal ${withdrawal_id} was created`);
-                const notification: NotificationEntity = new NotificationEntity();
-                notification.noti_id = MyUtils.generateUUID();
-                notification.noti_user = uid;
-                notification.noti_title = 'Withdrawal Request Created';
-                notification.noti_description = `Withdrawal request for staking ${staking.staking_id} was created`;
-                notification.noti_type = 'withdrawal';
-                notification.noti_created_at = BigInt(timestamp);
-                notification.noti_updated_at = BigInt(timestamp);
-                notification.noti_seen = false;
-                await this.notificationService.createNotification(notification);
-                setImmediate(async () => {
-                    const user = await this.userService.getProfileByUid(uid);
-                    const loggedDeviceRepo = manager.getRepository(LoggedDevice);
-                    const devices: LoggedDevice[] = await loggedDeviceRepo.find({ where: { user_id: uid }, order: { logged_at: "DESC" } });
-                    const userToken = devices.at(0).device_token;
-                    await this.pushService.sendToToken(userToken, 'Withdrawal Request Created', `Withdrawal request for staking ${staking.staking_id} was created`);
-                });
                 return savedWithdrawal;
             }catch(err){
                 console.error('Error creating withdrawal request:', err);
@@ -275,6 +333,18 @@ export class ProductsService {
                 throw new InternalServerErrorException('Failed to create withdrawal request');
             }
         })
+        const notification: NotificationEntity = new NotificationEntity();
+        notification.noti_id = MyUtils.generateUUID();
+        notification.noti_user = uid;
+        notification.noti_title = 'Withdrawal Request Created';
+        notification.noti_description = `Withdrawal request for staking ${withdrawalEntity.staking_id} was created`;
+        notification.noti_type = NOTIFICATION_TYPE_WITHDRAWAL;
+        notification.noti_created_at = BigInt(timestamp);
+        notification.noti_updated_at = BigInt(timestamp);
+        notification.noti_seen = false;
+        await this.notificationService.createNotification(notification);
+        this.sendPushNotification(uid, 'Withdrawal Request Created', `Withdrawal request for staking ${withdrawalEntity.staking_id} was created`, withdrawalEntity);
+        return withdrawalEntity;
     }
     
 
@@ -307,4 +377,25 @@ export class ProductsService {
         console.log(`Transaction submission failed after ${maxAttempts} attempts for user ${uid}`);
         return false;
     }
+
+    async sendPushNotification(uid: string, title: string, body: string, payload: any) {
+        setImmediate(async () => {
+            const user = await this.userService.getProfileByUid(uid);
+            const loggedDeviceRepo = this.dataSource.manager.getRepository(LoggedDevice);
+            const devices: LoggedDevice[] = await loggedDeviceRepo.find({ where: { user_id: uid }, order: { logged_at: "DESC" } });
+            const userToken = devices.at(0).device_token;
+            const data = JSON.parse(JSON.stringify({
+                payload: JSON.stringify(payload),
+                notification: JSON.stringify({
+                    title: title,
+                    body: body
+                })
+            }));
+            this.pushService.sendToToken(userToken, 'Staking Created', `Your staking has been created successfully`, data);
+        }); 
+    }
 }
+function uuidv4() {
+    throw new Error('Function not implemented.');
+}
+

@@ -30,4 +30,5 @@ export class UsersController {
     }
     return await this.userService.getReferrals(uid);
   }
+
 }

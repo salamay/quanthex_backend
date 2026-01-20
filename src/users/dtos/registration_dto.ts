@@ -6,5 +6,4 @@ export class RegistrationDto {
     device_type: string
     device_id: string
     reg_via: string
-    referral_code: string
 }

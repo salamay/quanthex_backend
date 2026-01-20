@@ -46,15 +46,25 @@ export class PushService {
       this.logger.error('Failed to initialize Firebase admin', err as any);
     }
   }
+
+  
   
 
   async sendToToken(token: string, title: string, body: string, data?: Record<string, string>) {
     if (!this.initialized) throw new Error('Firebase admin not initialized');
-
+    // Ensure all data values are strings
+    const stringData: Record<string, string> | undefined = data
+      ? Object.fromEntries(
+        Object.entries(data).map(([key, value]) => [
+          key,
+          typeof value === 'string' ? value : String(value)
+        ])
+      )
+      : undefined;
     const message: admin.messaging.Message = {
       token,
       notification: { title, body },
-      data: data || undefined,
+      data: stringData || undefined,
     };
 
     try {
@@ -63,17 +73,24 @@ export class PushService {
       return response;
     } catch (err) {
       this.logger.error('Failed to send push to token', err as any);
-      throw err;
     }
   }
 
   async sendToTokens(tokens: string[], title: string, body: string, data?: Record<string, string>) {
     if (!this.initialized) throw new Error('Firebase admin not initialized');
 
+    const stringData: Record<string, string> | undefined = data
+      ? Object.fromEntries(
+        Object.entries(data).map(([key, value]) => [
+          key,
+          typeof value === 'string' ? value : String(value)
+        ])
+      )
+      : undefined;
     const message: admin.messaging.MulticastMessage = {
       tokens,
       notification: { title, body },
-      data: data || undefined,
+      data: stringData || undefined,
     };
 
     try {
@@ -82,7 +99,6 @@ export class PushService {
       return response;
     } catch (err) {
       this.logger.error('Failed to send multicast push', err as any);
-      throw err;
     }
   }
 }

@@ -17,10 +17,13 @@ import { ProductUtils } from 'src/products/utils/product_utils';
 import { MiningMapper } from 'src/products/utils/mapper/mining_mapper';
 import { MiningEntity } from 'src/products/entities/minings';
 import { PushService } from './push.service';
+import { OAuth2Client } from 'google-auth-library/build/src/auth/oauth2client';
 
 @Injectable()
 export class AuthService {
     logger =new Logger(AuthService.name);
+    client = new OAuth2Client(process.env.OAUTH_CLIENT_ID);
+
     constructor(
         private dataSource: DataSource,
         private JwtService: JwtService,
@@ -79,38 +82,7 @@ export class AuthService {
             loggedDevice.device_type=registerDto.device_type;
             const loggedDeviceRepo=manager.getRepository(LoggedDevice);
             await loggedDeviceRepo.save(loggedDevice);
-            const referralProfile: ProfileEntity=await this.userService.refferalCodeUser(registerDto.referral_code)
-            if(referralProfile!=null){
-                const id=uuidv4()
-                const ref=new ReferralEntity()
-                ref.referral_id =id
-                ref.referral_uid=referralProfile.uid
-                ref.referree_uid=uid;
-                ref.referral_created_at = BigInt(Date.now())
-                ref.referral_updated_at= BigInt(Date.now())
-                const referralRepository = manager.getRepository(ReferralEntity)
-                referralRepository.save(ref)
-                this.logger.debug(`Referral recorded: ${referralProfile.uid} referred ${uid}`);
-                const referrals = await this.userService.getReferrals(referralProfile.uid)
-                this.logger.debug(`User ${referralProfile.uid} now has ${referrals.length} referrals.`);
-                const miningRecord=await this.productService.getMiningRecords(referralProfile.uid)
-                if(miningRecord.length!==null){
-                    this.logger.debug(`Mining records found for user: ${referralProfile.uid}`);
-                    const miningDto = miningRecord.at(0)
-                    if (miningDto != null) {
-                        this.logger.debug(`Changing hash rate for user: ${referralProfile.uid}`);
-                        const hashRate = ProductUtils.getHashRate(referrals.length)
-                        const miningEntity = miningDto.mining
-                        miningEntity.hash_rate = hashRate.toString()
-                        const miningRepo = manager.getRepository(MiningEntity);
-                        await miningRepo.save(miningEntity);
-                        this.logger.debug(`Hash rate updated to ${hashRate} for user: ${referralProfile.uid}`);
-                    } else {
-                        this.logger.debug(`No mining record found for user: ${referralProfile.uid}. No hash rate change applied.`);
-                    }
-                }
-            
-            }
+           
             setImmediate(() => {
                 this.pushService.sendToToken(
                     registerDto.device_token,
@@ -137,22 +109,28 @@ export class AuthService {
     }
 
     async signIn(payload:any): Promise<any>{
-        const email=payload.email;
-        const password=payload.password;
-        const device_token=payload.device_token;
-        const device_id=payload.device_id;
-        const device_type=payload.device_type;
+        const email = payload.email;
+        const device_token = payload.device_token;
+        const device_id = payload.device_id;
+        const device_type = payload.device_type;
         const query="SELECT * FROM users WHERE email = ?";
         const results:[]=await this.dataSource.manager.query(query, [email]);
         if (results.length===0){
             throw new UnprocessableEntityException('Invalid email or password');
         }
         const user = results.at(0) as UserEntity;
-        if(user.password!==password){
-            throw new UnprocessableEntityException('Password is incorrect');
+        if (user.reg_via ==='Basic'){
+            const password = payload.password;
+            if (user.password !== password) {
+                throw new UnprocessableEntityException('Password is incorrect');
+            }
+        }else if(user.reg_via ==='Google'){
+
+        }else{
+            throw new UnprocessableEntityException('Invalid registration method');
         }
         const loggedDevice: LoggedDevice = new LoggedDevice();
-        loggedDevice.device_id =device_id;
+        loggedDevice.device_id = device_id;
         loggedDevice.device_token = device_token;
         loggedDevice.user_id = user.uid;
         loggedDevice.logged_at = BigInt(Date.now());
@@ -161,5 +139,27 @@ export class AuthService {
         await loggedDeviceRepo.save(loggedDevice);
         return this.JwtService.sign({ uid: user.uid, email: user.email, roles: user.roles });
 
+    }
+
+    async googleLogin(payload :any): Promise<any>{
+        const {id_token}=payload;
+        const ticket = await this.client.verifyIdToken({
+            idToken:id_token,
+            audience: process.env.GOOGLE_CLIENT_ID, // Use your Android/iOS Client ID
+        });
+        const googlePayload = ticket.getPayload();
+        const email = googlePayload.email;
+        const firstName = googlePayload.given_name;
+        const lastName = googlePayload.family_name;
+        console.log(email,firstName,lastName);
+        const query="SELECT * FROM users WHERE email = ?";
+        const results:[]=await this.dataSource.manager.query(query, [email]);
+        const user = results.at(0) as UserEntity;
+        if (results.length===0){
+            throw new UnprocessableEntityException('Could not find user with this email');
+        }
+        if(user.reg_via ==='Google'){
+            return await this.signIn(payload)
+        }
     }
 }
