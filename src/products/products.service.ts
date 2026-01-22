@@ -74,30 +74,35 @@ export class ProductsService {
      * then repository.save() to insert/update.
      */
     async createSubscriptionProduct(uid: string, email: string,payload: SubscriptionPayload): Promise<SubscriptionEntity> {
-        console.log(`Creating subscription product for user: ${uid}`);
-        const timestamp = Date.now();
-        payload.email = email;
-        payload.sub_created_at = BigInt(timestamp);
-        payload.sub_updated_at = BigInt(timestamp);
-        payload.sub_status = Active
-        return await this.dataSource.transaction(async manager => {
-            try {
-                const sub_id=MyUtils.generateUUID()
-                // Ensure uid is set from the caller (do not trust payload.uid)
-                const data = { ...payload, uid, sub_id } as Partial<SubscriptionEntity>;
+        try{
+            console.log(`Creating subscription product for user: ${uid}`);
+            const timestamp = Date.now();
+            payload.email = email;
+            payload.sub_created_at = BigInt(timestamp);
+            payload.sub_updated_at = BigInt(timestamp);
+            payload.sub_status = Active
+            return await this.dataSource.transaction(async manager => {
+                try {
+                    const sub_id = MyUtils.generateUUID()
+                    // Ensure uid is set from the caller (do not trust payload.uid)
+                    const data = { ...payload, uid, sub_id } as Partial<SubscriptionEntity>;
 
-                // repository.create maps a plain object to an entity instance (runs transformers, etc.)
-                const entity = this.productsManager.subscriptionRepo.create(data as SubscriptionEntity);
-                // console.log('Mapped SubscriptionEntity:', entity);
-                // Optionally normalize/validate fields here (e.g. numbers parsed from strings)
-                // entity.sub_chain_id = Number(entity.sub_chain_id);
-                const saved = await this.productsManager.subscriptionRepo.save(entity);
-                return saved;
-            } catch (err) {
-                console.error('Error creating subscription entity:', err);
-                throw new InternalServerErrorException('Failed to create subscription');
-            }
-        })
+                    // repository.create maps a plain object to an entity instance (runs transformers, etc.)
+                    const entity = this.productsManager.subscriptionRepo.create(data as SubscriptionEntity);
+                    // console.log('Mapped SubscriptionEntity:', entity);
+                    // Optionally normalize/validate fields here (e.g. numbers parsed from strings)
+                    // entity.sub_chain_id = Number(entity.sub_chain_id);
+                    const saved = await this.productsManager.subscriptionRepo.save(entity);
+                    return saved;
+                } catch (err) {
+                    console.error('Error creating subscription entity:', err);
+                    throw new InternalServerErrorException('Failed to create subscription');
+                }
+            })
+        }catch(err){
+            console.error('Error creating subscription product:', err);
+            throw new InternalServerErrorException('Failed to create subscription');
+        }
     }
     
     
@@ -105,16 +110,21 @@ export class ProductsService {
         console.log(`Creating mining record for user: ${uid}`);
         const timestamp = Date.now();
         const miningEntity = await this.dataSource.transaction(async manager=>{
-            const miningEntity=new MiningEntity();
-            miningEntity.min_id =MyUtils.generateUUID();
-            miningEntity.uid=uid;
-            miningEntity.email=email;
-            miningEntity.min_created_at = BigInt(timestamp);
-            miningEntity.min_updated_at=BigInt(timestamp);
-            miningEntity.min_subscription_id = payload.sub_id;
-            miningEntity.hash_rate=ProductUtils.LEVEL_ONE_HASHRATE.toString();
-            const miningRepo=manager.getRepository(MiningEntity);
-            return await miningRepo.save(miningEntity);
+           try{
+               const miningEntity = new MiningEntity();
+               miningEntity.min_id = MyUtils.generateUUID();
+               miningEntity.uid = uid;
+               miningEntity.email = email;
+               miningEntity.min_created_at = BigInt(timestamp);
+               miningEntity.min_updated_at = BigInt(timestamp);
+               miningEntity.min_subscription_id = payload.sub_id;
+               miningEntity.hash_rate = ProductUtils.LEVEL_ONE_HASHRATE.toString();
+               const miningRepo = manager.getRepository(MiningEntity);
+               return await miningRepo.save(miningEntity);
+           }catch(err){
+            console.error('Error creating mining record:', err);
+            throw new InternalServerErrorException('Failed to create mining');
+           }
         })
         const notification: NotificationEntity = new NotificationEntity();
         notification.noti_id = MyUtils.generateUUID();
@@ -157,7 +167,6 @@ export class ProductsService {
                     this.logger.debug(`No mining record found for user: ${referralProfile.uid}. No hash rate change applied.`);
                 }
             }
-
         }
         return miningEntity;
     }
@@ -379,23 +388,27 @@ export class ProductsService {
     }
 
     async sendPushNotification(uid: string, title: string, body: string, payload: any) {
-        setImmediate(async () => {
-            const user = await this.userService.getProfileByUid(uid);
-            const loggedDeviceRepo = this.dataSource.manager.getRepository(LoggedDevice);
-            const devices: LoggedDevice[] = await loggedDeviceRepo.find({ where: { user_id: uid }, order: { logged_at: "DESC" } });
-            const userToken = devices.at(0).device_token;
-            const data = JSON.parse(JSON.stringify({
-                payload: JSON.stringify(payload),
-                notification: JSON.stringify({
-                    title: title,
-                    body: body
-                })
-            }));
-            this.pushService.sendToToken(userToken, 'Staking Created', `Your staking has been created successfully`, data);
-        }); 
+        try {
+            setImmediate(async () => {
+                const user = await this.userService.getProfileByUid(uid);
+                const loggedDeviceRepo = this.dataSource.manager.getRepository(LoggedDevice);
+                const devices: LoggedDevice[] = await loggedDeviceRepo.find({ where: { user_id: uid }, order: { logged_at: "DESC" } });
+                const userToken = devices.at(0).device_token;
+                const data = JSON.parse(JSON.stringify({
+                    payload: JSON.stringify(payload),
+                    notification: JSON.stringify({
+                        title: title,
+                        body: body
+                    })
+                }));
+                this.pushService.sendToToken(userToken, 'Staking Created', `Your staking has been created successfully`, data);
+            });
+        } catch (err) {
+            console.error('Error sending push notification:', err);
+            // throw new InternalServerErrorException('Failed to send push notification');
+        }
+        
     }
 }
-function uuidv4() {
-    throw new Error('Function not implemented.');
-}
+
 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { NotificationEntity } from './entities/Notification_entity';
 @Injectable()
@@ -10,8 +10,13 @@ export class NotificationService {
 
 
     async createNotification(notification: NotificationEntity): Promise<NotificationEntity> {
-        const notificationRepository = this.dataSource.getRepository(NotificationEntity);
-        return notificationRepository.save(notification);
+        try{
+            const notificationRepository = this.dataSource.getRepository(NotificationEntity);
+            return notificationRepository.save(notification);
+        }catch(err){
+            console.error('Error creating notification:', err);
+            throw new InternalServerErrorException('Failed to create notification');
+        }
     }
 
     async getNotificationsByUid(uid: string, offset: number = 0, limit: number = 20): Promise<NotificationEntity[]> {
@@ -52,22 +57,27 @@ export class NotificationService {
     }
 
     async markNotificationAsSeen(uid: string, notificationId: string): Promise<NotificationEntity> {
-        console.log(`Marking notification ${notificationId} as seen for user: ${uid}`);
-        const notificationRepository = this.dataSource.getRepository(NotificationEntity);
-        
-        const notification = await notificationRepository.findOne({
-            where: { noti_id: notificationId, noti_user: uid }
-        });
+        try{
+            console.log(`Marking notification ${notificationId} as seen for user: ${uid}`);
+            const notificationRepository = this.dataSource.getRepository(NotificationEntity);
 
-        if (!notification) {
-            throw new NotFoundException('Notification not found or you do not have permission to access it');
+            const notification = await notificationRepository.findOne({
+                where: { noti_id: notificationId, noti_user: uid }
+            });
+
+            if (!notification) {
+                throw new NotFoundException('Notification not found or you do not have permission to access it');
+            }
+
+            notification.noti_seen = true;
+            notification.noti_seen_at = BigInt(Date.now());
+            notification.noti_updated_at = BigInt(Date.now());
+
+            return await notificationRepository.save(notification);
+        }catch(err){
+            console.error('Error marking notification as seen:', err);
+            throw new InternalServerErrorException('Failed to mark notification as seen');
         }
-
-        notification.noti_seen = true;
-        notification.noti_seen_at = BigInt(Date.now());
-        notification.noti_updated_at = BigInt(Date.now());
-
-        return await notificationRepository.save(notification);
     }
 
 }
