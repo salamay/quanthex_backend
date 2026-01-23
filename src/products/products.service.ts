@@ -141,8 +141,8 @@ export class ProductsService {
         if (referralProfile != null) {
             const ref = new ReferralEntity()
             ref.referral_id = MyUtils.generateUUID()
-            ref.referral_uid = uid
-            ref.referree_uid = referralProfile.uid;
+            ref.referral_uid = referralProfile.uid
+            ref.referree_uid = uid;
             ref.referral_created_at = BigInt(Date.now())
             ref.referral_updated_at = BigInt(Date.now())
             const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
