@@ -371,6 +371,7 @@ export class ProductsService {
                     return true;
                 } else {
                     console.log(`Transaction FAILED (attempt ${attempt})`);
+                    
                     // fall through to retry if attempts remain
                 }
             } catch (err) {
@@ -388,12 +389,25 @@ export class ProductsService {
     }
 
     async sendPushNotification(uid: string, title: string, body: string, payload: any) {
-        try {
+        
             setImmediate(async () => {
+                try{
                 const user = await this.userService.getProfileByUid(uid);
                 const loggedDeviceRepo = this.dataSource.manager.getRepository(LoggedDevice);
                 const devices: LoggedDevice[] = await loggedDeviceRepo.find({ where: { user_id: uid }, order: { logged_at: "DESC" } });
-                const userToken = devices.at(0).device_token;
+                
+                if (!devices || devices.length === 0) {
+                    console.log(`No devices found for user ${uid}, skipping push notification`);
+                    return;
+                }
+                
+                const firstDevice = devices[0];
+                if (!firstDevice || !firstDevice.device_token) {
+                    console.log(`No device token found for user ${uid}, skipping push notification`);
+                    return;
+                }
+                
+                const userToken = firstDevice.device_token;
                 const data = JSON.parse(JSON.stringify({
                     payload: JSON.stringify(payload),
                     notification: JSON.stringify({
@@ -401,12 +415,14 @@ export class ProductsService {
                         body: body
                     })
                 }));
-                this.pushService.sendToToken(userToken, 'Staking Created', `Your staking has been created successfully`, data);
+                await this.pushService.sendToToken(userToken, title, body, data);
+                
+            }catch(err){
+                console.error('Error sending push notification:', err);
+                // throw new InternalServerErrorException('Failed to send push notification');
+            }
             });
-        } catch (err) {
-            console.error('Error sending push notification:', err);
-            // throw new InternalServerErrorException('Failed to send push notification');
-        }
+        
         
     }
 }
