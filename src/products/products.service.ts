@@ -37,27 +37,27 @@ export class ProductsService {
     ) {}
 
     async subscribeToProduct(uid: string, email: string, payload: SubscriptionPayload): Promise<SubscriptionEntity> {
-        // const referralProfile: ProfileEntity = await this.userService.refferalCodeUser(payload.sub_referral_code)
-        // if (referralProfile == null) {
-        //     throw new UnprocessableEntityException('Referral code not found');
-        // }
-        // const hasReferred = await this.userService.hasReferredSomeone(uid,referralProfile.uid);
-        // if (hasReferred) {
-        //     throw new UnprocessableEntityException('You have already referred this user');
-        // }
+        const referralProfile: ProfileEntity = await this.userService.refferalCodeUser(payload.sub_referral_code)
+        if (referralProfile == null) {
+            throw new UnprocessableEntityException('Referral code not found');
+        }
+        const hasReferred = await this.userService.hasReferredSomeone(uid,referralProfile.uid);
+        if (hasReferred) {
+            throw new UnprocessableEntityException('You have already referred this user');
+        }
         const user = await this.userService.getProfileByUid(uid);
-        // if (user == null) {
-        //     throw new UnprocessableEntityException('User not found');
-        // }
-        // if (user.referral_code == payload.sub_referral_code) {
-        //     throw new UnprocessableEntityException('You cannot refer yourself');
-        // }
-        // const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
-        // const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
-        // if (!status){
-        //     throw new UnprocessableEntityException('Transaction submission failed');
-        // }
-        // payload.email = email;
+        if (user == null) {
+            throw new UnprocessableEntityException('User not found');
+        }
+        if (user.referral_code == payload.sub_referral_code) {
+            throw new UnprocessableEntityException('You cannot refer yourself');
+        }
+        const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
+        const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
+        if (!status){
+            throw new UnprocessableEntityException('Transaction submission failed');
+        }
+        payload.email = email;
         const subType=payload.sub_type;
         if (subType === MINING){
             const subEntity: SubscriptionEntity= await this.createSubscriptionProduct(uid,email, payload);
@@ -174,10 +174,10 @@ export class ProductsService {
     async createStakingRecord(uid: string, email: string, payload: StakingPayload): Promise<StakingEntity>{
         console.log(`Creating staking record for user: ${uid}`);
         const timestamp = Date.now();
-        // const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
-        // if (!status) {
-        //     throw new UnprocessableEntityException('Transaction submission failed');
-        // }
+        const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
+        if (!status) {
+            throw new UnprocessableEntityException('Transaction submission failed');
+        }
         const stakingEntity = await this.dataSource.transaction(async manager=>{
             try{
                 const staking_id = MyUtils.generateUUID();
