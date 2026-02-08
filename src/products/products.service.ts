@@ -69,11 +69,11 @@ export class ProductsService {
         //     throw new UnprocessableEntityException('You have already referred this user');
         // }
 
-        const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
-        const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
-        if (!status){
-            throw new UnprocessableEntityException('Transaction submission failed');
-        }
+        // const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
+        // const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
+        // if (!status){
+        //     throw new UnprocessableEntityException('Transaction submission failed');
+        // }
         payload.email = email;
         const subType=payload.sub_type;
         if (subType === MINING){
