@@ -56,29 +56,29 @@ export class ProductsService {
         //     throw new UnprocessableEntityException('You cannot refer yourself');
         // }
 
-        // const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
-        // if (fromSubscription == null) {
-        //     throw new UnprocessableEntityException('Subscription not found');
-        // }
-        // if (fromSubscription.sub_status !== Active){
-        //     throw new UnprocessableEntityException('Subscription is not active');
-        // }
+        const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
+        if (fromSubscription == null) {
+            throw new UnprocessableEntityException('Subscription not found');
+        }
+        if (fromSubscription.sub_status !== Active){
+            throw new UnprocessableEntityException('Subscription is not active');
+        }
 
-        // const hasReferred = await this.hasReferredSomeone(fromSubscription.uid, uid);
-        // if (hasReferred) {
-        //     throw new UnprocessableEntityException('You have already referred this user');
-        // }
+        const hasReferred = await this.hasReferredSomeone(fromSubscription.uid, uid);
+        if (hasReferred) {
+            throw new UnprocessableEntityException('You have already referred this user');
+        }
 
-        // const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
-        // const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
-        // if (!status){
-        //     throw new UnprocessableEntityException('Transaction submission failed');
-        // }
+        const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
+        const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
+        if (!status){
+            throw new UnprocessableEntityException('Transaction submission failed');
+        }
         payload.email = email;
         const subType=payload.sub_type;
         if (subType === MINING){
             const subEntity: SubscriptionEntity = await this.createSubscriptionProduct(uid, email, payload);
-            await this.createMiningRecord(uid, email, subEntity, "Default");
+            await this.createMiningRecord(uid, email, subEntity, fromSubscription.sub_id);
             return subEntity;
         }else{
 
