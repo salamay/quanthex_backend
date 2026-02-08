@@ -23,4 +23,5 @@ export class SubscriptionPayload {
     sub_signed_tx: string
     sub_price: number
     sub_referral_code: string
+    sub_mining_tag: string
 }

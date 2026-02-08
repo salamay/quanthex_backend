@@ -50,6 +50,8 @@ export class SubscriptionEntity {
     sub_price: number
     @Column({ nullable: true })
     sub_referral_code: string
+    @Column({ nullable: true })
+    sub_mining_tag: string
 
 
 }

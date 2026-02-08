@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Request, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Request, UnauthorizedException } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { WithdrawalPayload } from './dtos/withdrawal_payload';
 
@@ -62,5 +62,15 @@ export class ProductsController {
               throw new UnauthorizedException('Missing user id on request');
             }
         return await this.productsService.getWithdrawalRecords(uid);
+    }
+
+    @Get("subscription-referrals")
+    async getSubscriptionReferrals(@Request() req, @Query('subscriptionId') subscriptionId: string): Promise<any> {
+        const uid = req.user?.uid;
+        console.log('Fetching referrals for user:', uid);
+        if (!uid) {
+            throw new UnauthorizedException('Missing user id on request');
+        }
+        return await this.productsService.getSubscriptionReferrals(uid, subscriptionId);
     }
 }

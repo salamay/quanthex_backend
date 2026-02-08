@@ -10,6 +10,7 @@ export class MiningMapper {
         miningEntity.min_created_at = row.min_created_at
         miningEntity.min_updated_at = row.min_updated_at
         miningEntity.min_subscription_id = row.min_subscription_id
+        miningEntity.mining_tag = row.mining_tag
         miningEntity.hash_rate = row.hash_rate
         return miningEntity
     }

@@ -3,7 +3,7 @@ import { ProductsManager } from './products_manager';
 import { SubscriptionPayload } from './dtos/subscription_payload';
 import { SubscriptionEntity } from './entities/subscription_entities';
 import { JsonRpcProvider } from 'ethers';
-import { Active, MINING } from 'src/constants/my_constants';
+import { Active, Completed, MINING } from 'src/constants/my_constants';
 import { NetworkUtils } from 'src/utils/network_utils';
 import { DataSource } from 'typeorm';
 import { MyUtils } from 'src/utils/my_utils';
@@ -24,6 +24,9 @@ import { LoggedDevice } from 'src/auth/entities/logged_device';
 import { NOTIFICATION_TYPE_MINING, NOTIFICATION_TYPE_STAKING, NOTIFICATION_TYPE_WITHDRAWAL } from 'src/utils/constants';
 import { ReferralEntity } from 'src/users/entities/referral_entity';
 import { ProfileEntity } from 'src/users/entities/profile_entity';
+import { ReferralDto } from 'src/users/dtos/referral_dto';
+import { ProfileMapper } from 'src/users/mapper/profile_mapper';
+import { ReferralEntityMapper } from 'src/utils/mapper/referral_entity_maper';
 
 @Injectable()
 export class ProductsService {
@@ -37,21 +40,35 @@ export class ProductsService {
     ) {}
 
     async subscribeToProduct(uid: string, email: string, payload: SubscriptionPayload): Promise<SubscriptionEntity> {
-        const referralProfile: ProfileEntity = await this.userService.refferalCodeUser(payload.sub_referral_code)
-        if (referralProfile == null) {
-            throw new UnprocessableEntityException('Referral code not found');
+        // const referralProfile: ProfileEntity = await this.userService.refferalCodeUser(payload.sub_referral_code)
+        // if (referralProfile == null) {
+        //     throw new UnprocessableEntityException('Referral code not found');
+        // }
+        // const hasReferred = await this.userService.hasReferredSomeone(uid,referralProfile.uid);
+        // if (hasReferred) {
+        //     throw new UnprocessableEntityException('You have already referred this user');
+        // }
+        // const user = await this.userService.getProfileByUid(uid);
+        // if (user == null) {
+        //     throw new UnprocessableEntityException('User not found');
+        // }
+        // if (user.referral_code == payload.sub_referral_code) {
+        //     throw new UnprocessableEntityException('You cannot refer yourself');
+        // }
+
+        const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
+        if (fromSubscription == null) {
+            throw new UnprocessableEntityException('Subscription not found');
         }
-        const hasReferred = await this.userService.hasReferredSomeone(uid,referralProfile.uid);
+        if (fromSubscription.sub_status !== Active){
+            throw new UnprocessableEntityException('Subscription is not active');
+        }
+
+        const hasReferred = await this.hasReferredSomeone(fromSubscription.uid, uid);
         if (hasReferred) {
             throw new UnprocessableEntityException('You have already referred this user');
         }
-        const user = await this.userService.getProfileByUid(uid);
-        if (user == null) {
-            throw new UnprocessableEntityException('User not found');
-        }
-        if (user.referral_code == payload.sub_referral_code) {
-            throw new UnprocessableEntityException('You cannot refer yourself');
-        }
+
         const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
         const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
         if (!status){
@@ -60,8 +77,8 @@ export class ProductsService {
         payload.email = email;
         const subType=payload.sub_type;
         if (subType === MINING){
-            const subEntity: SubscriptionEntity= await this.createSubscriptionProduct(uid,email, payload);
-            await this.createMiningRecord(uid, email, subEntity);
+            const subEntity: SubscriptionEntity = await this.createSubscriptionProduct(uid, email, payload);
+            await this.createMiningRecord(uid, email, subEntity, fromSubscription.sub_id);
             return subEntity;
         }else{
 
@@ -73,9 +90,10 @@ export class ProductsService {
      * Uses TypeORM repository.create() to map plain object to entity instance,
      * then repository.save() to insert/update.
      */
-    async createSubscriptionProduct(uid: string, email: string,payload: SubscriptionPayload): Promise<SubscriptionEntity> {
+    async createSubscriptionProduct(uid: string, email: string, payload: SubscriptionPayload): Promise<SubscriptionEntity> {
         try{
             console.log(`Creating subscription product for user: ${uid}`);
+            payload.sub_mining_tag = MyUtils.generateLetterCode(9);
             const timestamp = Date.now();
             payload.email = email;
             payload.sub_created_at = BigInt(timestamp);
@@ -106,7 +124,7 @@ export class ProductsService {
     }
     
     
-    async createMiningRecord(uid:string,email:string,payload:SubscriptionEntity):Promise<MiningEntity>{
+    async createMiningRecord(uid: string, email: string, payload: SubscriptionEntity, fromSubscriptionId: string):Promise<MiningEntity>{
         console.log(`Creating mining record for user: ${uid}`);
         const timestamp = Date.now();
         const miningEntity = await this.dataSource.transaction(async manager=>{
@@ -119,6 +137,7 @@ export class ProductsService {
                miningEntity.min_updated_at = BigInt(timestamp);
                miningEntity.min_subscription_id = payload.sub_id;
                miningEntity.hash_rate = ProductUtils.LEVEL_ONE_HASHRATE.toString();
+               miningEntity.mining_tag = payload.sub_mining_tag;
                const miningRepo = manager.getRepository(MiningEntity);
                return await miningRepo.save(miningEntity);
            }catch(err){
@@ -137,16 +156,19 @@ export class ProductsService {
         notification.noti_seen = false;
         await this.notificationService.createNotification(notification);
         this.sendPushNotification(uid, 'Mining Created', `Your mining has been created successfully`, miningEntity);
-        const referralProfile: ProfileEntity = await this.userService.refferalCodeUser(payload.sub_referral_code)
-        if (referralProfile != null) {
+        const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
+        if (fromSubscription != null) {
+            const referralUid = fromSubscription.uid
             const ref = new ReferralEntity()
             ref.referral_id = MyUtils.generateUUID()
-            ref.referral_uid = referralProfile.uid
+            ref.referral_uid = referralUid
             ref.referree_uid = uid;
+            ref.referral_subscription_id = fromSubscriptionId;
             ref.referral_created_at = BigInt(Date.now())
             ref.referral_updated_at = BigInt(Date.now())
             const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
             await referralRepository.save(ref)
+            const referralProfile=await this.userService.getProfileByUid(referralUid)
             this.logger.debug(`Referral recorded: ${referralProfile.uid} referred ${uid}`);
             const referrals = await this.userService.getReferrals(referralProfile.uid)
             this.logger.debug(`User ${referralProfile.uid} now has ${referrals.length} referrals.`);
@@ -240,7 +262,7 @@ export class ProductsService {
         console.log(`Fetching staking records for user: ${uid}`);
         try{
             return await this.productsManager.stakingRepo.find({
-                where:{uid:uid},
+                where:{uid:uid,staking_status:Active},
                 order:{stake_created_at:"DESC"}
             });
         }catch(err){
@@ -331,9 +353,12 @@ export class ProductsService {
 
                 const entity = withdrawalRepo.create(withdrawalData as WithdrawalEntity);
                 const savedWithdrawal = await withdrawalRepo.save(entity);
+                //Update the staking status to Completed
+                staking.staking_status = Completed;
+                await stakingRepo.save(staking);
                 
-                // Delete the staking after withdrawal is created
-                await stakingRepo.delete({ staking_id: staking.staking_id });
+                // // Delete the staking after withdrawal is created
+                // await stakingRepo.delete({ staking_id: staking.staking_id });
                 console.log(`Staking ${staking.staking_id} deleted after withdrawal ${withdrawal_id} was created`);
                 return savedWithdrawal;
             }catch(err){
@@ -376,6 +401,7 @@ export class ProductsService {
                 }
             } catch (err) {
                 console.error(`Error submitting transaction (attempt ${attempt}):`, err);
+                provider.destroy();
             }
 
             if (attempt < maxAttempts) {
@@ -424,6 +450,48 @@ export class ProductsService {
             });
         
         
+    }
+    async getSubscriptionByMiningTag(miningTag: string): Promise<SubscriptionEntity> {
+        try{
+            const subscriptionRepository = this.dataSource.manager.getRepository(SubscriptionEntity)
+            const subscription = await subscriptionRepository.findOne({ where: { sub_mining_tag: miningTag } })
+            return subscription;
+        }catch(err){
+            console.error('Error getting subscription by mining tag:', err);
+            throw new InternalServerErrorException('Failed to get subscription by mining tag');
+        }
+    }
+    async getSubscriptionReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
+        this.logger.debug("Getting referrals for user ", uid)
+        const referrals: ReferralDto[] = []
+        const query = `SELECT * FROM referrals r
+                       LEFT JOIN profiles p ON r.referree_uid = p.uid
+                       WHERE referral_uid = ? AND referral_subscription_id = ? `;
+        const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
+        const results: [] = await referralRepository.query(query, [uid, subscriptionId])
+        this.logger.debug(`Found ${results.length} referrals for user ${uid}`)
+        for (const row of results) {
+            const referralDto = new ReferralDto()
+            const referralEntity = ReferralEntityMapper.toEntity(row);
+            const referreeEntity = ProfileMapper.toEntity(row);
+            referralDto.info = referralEntity
+            referralDto.profile = referreeEntity
+            referrals.push(referralDto)
+        }
+        return referrals;
+    }
+
+    async hasReferredSomeone(referralUid: string, referreeUid: string): Promise<boolean> {
+        this.logger.debug(`Checking if user ${referralUid} has referred someone with user id ${referreeUid} before`);
+        try {
+            const query = "SELECT COUNT(*) as count FROM referrals WHERE referral_uid = ? AND referree_uid = ?";
+            const results: any[] = await this.dataSource.manager.getRepository(ReferralEntity).query(query, [referralUid, referreeUid]);
+            const count = results[0]?.count || 0;
+            return count > 0;
+        } catch (err) {
+            this.logger.error(`Error checking referrals for user ${referralUid} with user id ${referreeUid}:`, err);
+            throw new UnprocessableEntityException('An error occurred while checking referrals');
+        }
     }
 }
 
