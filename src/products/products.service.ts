@@ -57,6 +57,7 @@ export class ProductsService {
         // }
 
 
+        
         // const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
         // if (fromSubscription == null) {
         //     throw new UnprocessableEntityException('Subscription not found');
