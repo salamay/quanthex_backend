@@ -12,6 +12,7 @@ import { ReferralEntity } from './entities/referral_entity';
 import { ReferralDto } from './dtos/referral_dto';
 import { ReferralEntityMapper } from 'src/utils/mapper/referral_entity_maper';
 import { ProfileMapper } from './mapper/profile_mapper';
+import { REFERRAL_DEPTH_DIRECT, REFERRAL_DEPTH_INDIRECT } from 'src/constants/my_constants';
 
 @Injectable()
 export class UsersService {
@@ -57,21 +58,26 @@ export class UsersService {
 
     }
 
-    async getReferrals(uid: string): Promise<ReferralDto[]> {
+    async getDirectReferrals(uid: string): Promise<ReferralDto[]> {
         this.logger.debug("Getting referrals for user ",uid)
+        const depth = REFERRAL_DEPTH_DIRECT;
         const referrals: ReferralDto[]=[]
         const query = `SELECT * FROM referrals r
                        LEFT JOIN profiles p ON r.referree_uid = p.uid
-                       WHERE referral_uid = ? `;
-        const results: []=await this.userManager.referralRepository.query(query,[uid])
-        this.logger.debug(`Found ${results.length} referrals for user ${uid}`)
-        for(const row of results){
-            const referralDto=new ReferralDto()
-            const referralEntity = ReferralEntityMapper.toEntity(row);
-            const referreeEntity = ProfileMapper.toEntity(row);
-            referralDto.info=referralEntity
-            referralDto.profile = referreeEntity
-            referrals.push(referralDto)
+                       WHERE referral_uid = ? AND depth = ? `;
+        try {
+            const results: [] = await this.userManager.referralRepository.query(query, [uid, +depth])
+            this.logger.debug(`Found ${results.length} referrals for user ${uid}`)
+            for (const row of results) {
+                const referralDto = new ReferralDto()
+                const referralEntity = ReferralEntityMapper.toEntity(row);
+                const referreeEntity = ProfileMapper.toEntity(row);
+                referralDto.info = referralEntity
+                referralDto.profile = referreeEntity
+                referrals.push(referralDto)
+            }
+        } catch (err) {
+            throw new UnprocessableEntityException('An error occurred while processing your request');
         }
         return referrals;
     }
@@ -79,11 +85,16 @@ export class UsersService {
     async refferalCodeUser(referralCode: string): Promise<ProfileEntity>{
         this.logger.debug("getting user this referral belongs to ", referralCode)
         const query ="SELECT * from profiles WHERE referral_code=?"
+        try{
         const results: [] = await this.userManager.profileRepository.query(query, [referralCode])
         if(results.length===0){
             this.logger.debug("Could not find user that this referral code belongs to")
+            throw new NotFoundException("User not found")
         }
         return results.at(0)as ProfileEntity
+        }catch(err){
+            throw new UnprocessableEntityException('An error occurred while processing your request');
+        }
     }
 
     async hasReferredSomeone(uid: string, referralCode: string): Promise<boolean> {

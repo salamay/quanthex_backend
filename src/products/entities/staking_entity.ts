@@ -48,4 +48,8 @@ export class StakingEntity {
     end_date: number
     @Column({ nullable: false, type: 'bigint' })
     start_date: number
+    @Column()
+    staking_wallet_hash:string
+    @Column()
+    staking_wallet_address:string
 }

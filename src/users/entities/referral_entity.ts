@@ -14,4 +14,13 @@ export class ReferralEntity {
     referral_created_at: BigInt
     @Column({ nullable: false, type: 'bigint' })
     referral_updated_at: BigInt
+    @Column({ nullable: true })
+    referral_ancestor_uid: string
+    @Column({ nullable: true })
+    referral_descendant_uid: string
+    @Column({ nullable: true })
+    depth: number
+    @Column({ nullable: true })
+    referral_ancestor_sub_id: string
+
 }

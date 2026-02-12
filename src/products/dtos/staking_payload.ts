@@ -43,5 +43,7 @@ export class StakingPayload {
         duration: number
         end_date: number
         start_date: number
+        staking_wallet_hash: string
+        staking_wallet_address: string
       
 }

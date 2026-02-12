@@ -52,6 +52,10 @@ export class SubscriptionEntity {
     sub_referral_code: string
     @Column({ nullable: true })
     sub_mining_tag: string
+    @Column({ nullable: true })
+    sub_wallet_hash: string
+    @Column({ nullable: true })
+    sub_wallet_address: string
 
 
 }

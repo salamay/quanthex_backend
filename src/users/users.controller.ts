@@ -28,7 +28,9 @@ export class UsersController {
     if (!uid) {
       throw new UnauthorizedException('Missing user id on request');
     }
-    return await this.userService.getReferrals(uid);
+    return await this.userService.getDirectReferrals(uid);
   }
+
+
 
 }

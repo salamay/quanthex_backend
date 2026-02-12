@@ -3,7 +3,7 @@ import { ProductsManager } from './products_manager';
 import { SubscriptionPayload } from './dtos/subscription_payload';
 import { SubscriptionEntity } from './entities/subscription_entities';
 import { JsonRpcProvider } from 'ethers';
-import { Active, Completed, MINING } from 'src/constants/my_constants';
+import { Active, Completed, MINING, REFERRAL_DEPTH_DIRECT, REFERRAL_DEPTH_INDIRECT } from 'src/constants/my_constants';
 import { NetworkUtils } from 'src/utils/network_utils';
 import { DataSource } from 'typeorm';
 import { MyUtils } from 'src/utils/my_utils';
@@ -56,6 +56,7 @@ export class ProductsService {
         //     throw new UnprocessableEntityException('You cannot refer yourself');
         // }
 
+
         const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
         if (fromSubscription == null) {
             throw new UnprocessableEntityException('Subscription not found');
@@ -63,26 +64,34 @@ export class ProductsService {
         if (fromSubscription.sub_status !== Active){
             throw new UnprocessableEntityException('Subscription is not active');
         }
-
+        if (!this.checkIfProductIsSame(fromSubscription.sub_package_name, payload.sub_package_name)) {
+            throw new UnprocessableEntityException(`You cannot subscribe to a different product, please use the same product as your upline: ${fromSubscription.sub_package_name}`);
+        }
+        const walletExists = await this.checkIfWalletExistsInSub(payload.sub_wallet_hash)
+        if (walletExists) {
+            throw new UnprocessableEntityException('Wallet already in use, please use a different wallet');
+        }
         const hasReferred = await this.hasReferredSomeone(fromSubscription.uid, uid);
         if (hasReferred) {
-            throw new UnprocessableEntityException('You have already referred this user');
+            throw new UnprocessableEntityException('You have already referred this user or you have this user as your descendant');
+        }
+        const hasBeenReferredBefore = await this.hasBeenReferredBefore(fromSubscription.uid);
+        if (hasBeenReferredBefore) {
+            throw new UnprocessableEntityException('You cannot refer this user again as this user has already been referred before');
         }
 
-        const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
-        const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
-        if (!status){
-            throw new UnprocessableEntityException('Transaction submission failed');
-        }
+        // const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
+        // const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
+        // if (!status){
+        //     throw new UnprocessableEntityException('Transaction submission failed');
+        // }
         payload.email = email;
         const subType=payload.sub_type;
-        if (subType === MINING){
+        return await this.dataSource.transaction(async manager => {
             const subEntity: SubscriptionEntity = await this.createSubscriptionProduct(uid, email, payload);
             await this.createMiningRecord(uid, email, subEntity, fromSubscription.sub_id);
             return subEntity;
-        }else{
-
-        }
+        })
     }
 
     /**
@@ -99,24 +108,22 @@ export class ProductsService {
             payload.sub_created_at = BigInt(timestamp);
             payload.sub_updated_at = BigInt(timestamp);
             payload.sub_status = Active
-            return await this.dataSource.transaction(async manager => {
-                try {
-                    const sub_id = MyUtils.generateUUID()
-                    // Ensure uid is set from the caller (do not trust payload.uid)
-                    const data = { ...payload, uid, sub_id } as Partial<SubscriptionEntity>;
+            try {
+                const sub_id = MyUtils.generateUUID()
+                // Ensure uid is set from the caller (do not trust payload.uid)
+                const data = { ...payload, uid, sub_id } as Partial<SubscriptionEntity>;
 
-                    // repository.create maps a plain object to an entity instance (runs transformers, etc.)
-                    const entity = this.productsManager.subscriptionRepo.create(data as SubscriptionEntity);
-                    // console.log('Mapped SubscriptionEntity:', entity);
-                    // Optionally normalize/validate fields here (e.g. numbers parsed from strings)
-                    // entity.sub_chain_id = Number(entity.sub_chain_id);
-                    const saved = await this.productsManager.subscriptionRepo.save(entity);
-                    return saved;
-                } catch (err) {
-                    console.error('Error creating subscription entity:', err);
-                    throw new InternalServerErrorException('Failed to create subscription');
-                }
-            })
+                // repository.create maps a plain object to an entity instance (runs transformers, etc.)
+                const entity = this.productsManager.subscriptionRepo.create(data as SubscriptionEntity);
+                // console.log('Mapped SubscriptionEntity:', entity);
+                // Optionally normalize/validate fields here (e.g. numbers parsed from strings)
+                // entity.sub_chain_id = Number(entity.sub_chain_id);
+                const saved = await this.productsManager.subscriptionRepo.save(entity);
+                return saved;
+            } catch (err) {
+                console.error('Error creating subscription entity:', err);
+                throw new InternalServerErrorException('Failed to create subscription');
+            }
         }catch(err){
             console.error('Error creating subscription product:', err);
             throw new InternalServerErrorException('Failed to create subscription');
@@ -159,6 +166,9 @@ export class ProductsService {
         const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
         if (fromSubscription != null) {
             const referralUid = fromSubscription.uid
+            //Get the ancestor of the user
+            const ancestorReferral = await this.getAncestor(referralUid)
+            
             const ref = new ReferralEntity()
             ref.referral_id = MyUtils.generateUUID()
             ref.referral_uid = referralUid
@@ -166,19 +176,42 @@ export class ProductsService {
             ref.referral_subscription_id = fromSubscriptionId;
             ref.referral_created_at = BigInt(Date.now())
             ref.referral_updated_at = BigInt(Date.now())
+            //If the user has an ancestor, set the depth to indirect, otherwise set it to direct
+            //We do this because if the user has an ancestor, the user is indirectly referred by the ancestor and the user that refer this person.
+            //So the referree is placed under the referral and the ancestor
+
+            if (ancestorReferral != null && ancestorReferral.referral_ancestor_uid != null) {
+                //Means the referral has an ancestor, so we set the ancestor
+                ref.referral_ancestor_uid = ancestorReferral.referral_ancestor_uid;
+                ref.depth = REFERRAL_DEPTH_INDIRECT;
+                //Set the ancestor subscription id for tracking
+                ref.referral_ancestor_sub_id = ancestorReferral.referral_ancestor_sub_id;
+
+            } else {
+                //Means the referral has no ancestor, so we set the referral as the ancestor
+                ref.referral_ancestor_uid = referralUid;
+                ref.depth = REFERRAL_DEPTH_DIRECT;
+                //Since the referral has no ancestor, set set the ancestor subscription id to the subscription id of the referral
+                ref.referral_ancestor_sub_id = fromSubscription.sub_id;
+
+            }
+            ref.referral_descendant_uid = uid;
             const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
             await referralRepository.save(ref)
             const referralProfile=await this.userService.getProfileByUid(referralUid)
             this.logger.debug(`Referral recorded: ${referralProfile.uid} referred ${uid}`);
-            const referrals = await this.userService.getReferrals(referralProfile.uid)
-            this.logger.debug(`User ${referralProfile.uid} now has ${referrals.length} referrals.`);
+            const directReferrals = await this.userService.getDirectReferrals(referralProfile.uid)
+            const indirectReferrals = await this.getIndirectReferrals(referralProfile.uid, fromSubscriptionId)
+            const totalReferrals = directReferrals.length + indirectReferrals.length
+            this.logger.debug(`User ${referralProfile.uid} now has ${directReferrals.length} direct referrals and ${indirectReferrals.length} indirect referrals.`);
+            this.logger.debug(`User ${referralProfile.uid} now has ${totalReferrals} referrals.`);
             const miningRecord = await this.getMiningRecords(referralProfile.uid)
             if (miningRecord.length !== null) {
                 this.logger.debug(`Mining records found for user: ${referralProfile.uid}`);
                 const miningDto = miningRecord.at(0)
                 if (miningDto != null) {
                     this.logger.debug(`Changing hash rate for user: ${referralProfile.uid}`);
-                    const hashRate = ProductUtils.getHashRate(referrals.length)
+                    const hashRate = ProductUtils.getHashRate(totalReferrals)
                     const miningEntity = miningDto.mining
                     miningEntity.hash_rate = hashRate.toString()
                     const miningRepo = this.dataSource.getRepository(MiningEntity);
@@ -466,10 +499,29 @@ export class ProductsService {
         const referrals: ReferralDto[] = []
         const query = `SELECT * FROM referrals r
                        LEFT JOIN profiles p ON r.referree_uid = p.uid
-                       WHERE referral_uid = ? AND referral_subscription_id = ? `;
+                       WHERE referral_uid = ? AND referral_subscription_id = ? AND depth = ? `;
         const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
-        const results: [] = await referralRepository.query(query, [uid, subscriptionId])
+        const results: [] = await referralRepository.query(query, [uid, subscriptionId, +REFERRAL_DEPTH_DIRECT])
         this.logger.debug(`Found ${results.length} referrals for user ${uid}`)
+        for (const row of results) {
+            const referralDto = new ReferralDto()
+            const referralEntity = ReferralEntityMapper.toEntity(row);
+            const referreeEntity = ProfileMapper.toEntity(row);
+            referralDto.info = referralEntity
+            referralDto.profile = referreeEntity
+            referrals.push(referralDto)
+        }
+        return referrals;
+    }
+    async getIndirectReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
+        this.logger.debug("Getting indirect referrals for user ", uid)
+        const referrals: ReferralDto[] = []
+        const query = `SELECT * FROM referrals r
+                       LEFT JOIN profiles p ON r.referral_ancestor_uid = p.uid
+                       WHERE r.referral_ancestor_uid = ? AND r.depth = ? AND r.referral_ancestor_sub_id = ? `;
+        const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
+        const results: [] = await referralRepository.query(query, [uid, REFERRAL_DEPTH_INDIRECT,subscriptionId])
+        this.logger.debug(`Found ${results.length} indirect referrals for user ${uid}`)
         for (const row of results) {
             const referralDto = new ReferralDto()
             const referralEntity = ReferralEntityMapper.toEntity(row);
@@ -484,14 +536,60 @@ export class ProductsService {
     async hasReferredSomeone(referralUid: string, referreeUid: string): Promise<boolean> {
         this.logger.debug(`Checking if user ${referralUid} has referred someone with user id ${referreeUid} before`);
         try {
-            const query = "SELECT COUNT(*) as count FROM referrals WHERE referral_uid = ? AND referree_uid = ?";
-            const results: any[] = await this.dataSource.manager.getRepository(ReferralEntity).query(query, [referralUid, referreeUid]);
+            const query = "SELECT COUNT(*) as count FROM referrals WHERE referral_uid = ? AND (referree_uid = ? OR referral_descendant_uid = ?)";
+            const results: any[] = await this.dataSource.manager.getRepository(ReferralEntity).query(query, [referralUid, referreeUid, referreeUid]);
             const count = results[0]?.count || 0;
             return count > 0;
         } catch (err) {
             this.logger.error(`Error checking referrals for user ${referralUid} with user id ${referreeUid}:`, err);
-            throw new UnprocessableEntityException('An error occurred while checking referrals');
+            throw new UnprocessableEntityException('An error occurred');
         }
+    }
+    async hasBeenReferredBefore(referreeUid: string): Promise<boolean> {
+        try{
+            const query = "SELECT COUNT(*) as count FROM referrals WHERE referree_uid = ?";
+            const results: any[] = await this.dataSource.manager.getRepository(ReferralEntity).query(query, [referreeUid]);
+            const count = results[0]?.count || 0;
+            return count > 0;
+        } catch (err) {
+            this.logger.error(`Error checking if user ${referreeUid} has been referred before:`, err);
+            throw new UnprocessableEntityException('An error occurred');
+        }
+    }
+
+    async getAncestor(referreeUid: string): Promise<ReferralEntity | null> {
+        try{
+            //This should return the very first ancestor of the user
+            const query = "SELECT * FROM referrals WHERE referree_uid = ? AND referral_ancestor_uid IS NOT NULL ORDER BY referral_created_at ASC LIMIT 1";
+            const results: any[] = await this.dataSource.manager.getRepository(ReferralEntity).query(query, [referreeUid]);
+            if (results.length > 0) {
+                this.logger.debug(`Ancestor found for user ${referreeUid}: ${results[0].referral_ancestor_uid}`);
+                const referralEntity = ReferralEntityMapper.toEntity(results[0]);
+                return referralEntity;
+            }else{
+                console.log(`No ancestor found for user ${referreeUid}`);
+                return null;
+            }
+        } catch (err) {
+            this.logger.error(`Error getting ancestor: ${referreeUid}`, err);
+            throw new UnprocessableEntityException('An error occurred');
+        }
+    }
+    async checkIfWalletExistsInSub(walletHash: string): Promise<boolean> {
+        try{
+            const query = "SELECT COUNT(*) as count FROM subscriptions WHERE sub_wallet_hash = ?";
+            const results: any[] = await this.dataSource.manager.getRepository(SubscriptionEntity).query(query, [walletHash]);
+            const count = results[0]?.count || 0;
+            return count > 0;
+        }
+        catch(err){
+            this.logger.error(`Error checking if wallet exists: ${walletHash}:`, err);
+            throw new UnprocessableEntityException('An error occurred');
+        }
+    }
+    checkIfProductIsSame(uplineName: string, newSubName: string): boolean {
+        return uplineName===newSubName;
+
     }
 }
 

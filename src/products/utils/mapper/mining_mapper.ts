@@ -12,6 +12,8 @@ export class MiningMapper {
         miningEntity.min_subscription_id = row.min_subscription_id
         miningEntity.mining_tag = row.mining_tag
         miningEntity.hash_rate = row.hash_rate
+        miningEntity.mining_wallet_hash = row.mining_wallet_hash
+        miningEntity.mining_wallet_address = row.mining_wallet_address
         return miningEntity
     }
 }

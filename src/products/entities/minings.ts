@@ -18,5 +18,9 @@ export class MiningEntity{
     hash_rate:string
     @Column()
     mining_tag:string
+    @Column()
+    mining_wallet_hash:string
+    @Column()
+    mining_wallet_address:string
 
 }
