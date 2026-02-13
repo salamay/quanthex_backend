@@ -75,10 +75,10 @@ export class ProductsService {
         if (hasReferred) {
             throw new UnprocessableEntityException('You have already referred this user or you have this user as your descendant');
         }
-        const hasBeenReferredBefore = await this.hasBeenReferredBefore(fromSubscription.uid);
-        if (hasBeenReferredBefore) {
-            throw new UnprocessableEntityException('You cannot refer this user again as this user has already been referred before');
-        }
+        // const hasBeenReferredBefore = await this.hasBeenReferredBefore(fromSubscription.uid);
+        // if (hasBeenReferredBefore) {
+        //     throw new UnprocessableEntityException('You cannot refer this user again as this user has already been referred before');
+        // }
 
         const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
         const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
