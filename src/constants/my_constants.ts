@@ -3,6 +3,6 @@ const Active="Active"
 const Completed="Completed"
 const MINING="MINING"
 const STAKING="STAKING"
-const REFERRAL_DEPTH_DIRECT=1
-const REFERRAL_DEPTH_INDIRECT=0
+const REFERRAL_DEPTH_DIRECT:number=1
+const REFERRAL_DEPTH_INDIRECT:number=0
 export {ROLE_USER, Active, Completed, MINING, STAKING, REFERRAL_DEPTH_DIRECT, REFERRAL_DEPTH_INDIRECT};
