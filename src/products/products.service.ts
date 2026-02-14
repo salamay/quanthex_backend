@@ -530,7 +530,7 @@ export class ProductsService {
         const referrals: ReferralDto[] = []
         const query = `SELECT * FROM referrals r
                        LEFT JOIN profiles p ON r.referral_ancestor_uid = p.uid
-                       WHERE r.referral_ancestor_uid = ? AND r.referral_subscription_id = ?`;
+                       WHERE r.referral_ancestor_uid = ? AND r.referral_ancestor_sub_id = ?`;
         const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
         const results: [] = await referralRepository.query(query, [uid, ,subscriptionId])
         this.logger.debug(`Found ${results.length} indirect referrals for user ${uid}`)
