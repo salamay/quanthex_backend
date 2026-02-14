@@ -497,11 +497,11 @@ export class ProductsService {
     async getSubscriptionReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
         this.logger.debug("Getting referrals for user ", uid)
         const referrals: ReferralDto[] = []
-        const query = `SELECT * FROM referrals r
+        const query = `SELECT * FROM referrals r 
                        LEFT JOIN profiles p ON r.referree_uid = p.uid
-                       WHERE referral_uid = ? AND referral_subscription_id = ? AND depth = ? `;
+                       WHERE referral_uid = ? AND referral_subscription_id = ? AND depth = ?`;
         const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
-        const results: [] = await referralRepository.query(query, [uid, subscriptionId, REFERRAL_DEPTH_DIRECT])
+        const results: [] = await referralRepository.query(query, [uid, subscriptionId])
         this.logger.debug(`Found ${results.length} referrals for user ${uid}`)
         for (const row of results) {
             const referralDto = new ReferralDto()
@@ -518,9 +518,9 @@ export class ProductsService {
         const referrals: ReferralDto[] = []
         const query = `SELECT * FROM referrals r
                        LEFT JOIN profiles p ON r.referral_ancestor_uid = p.uid
-                       WHERE r.referral_ancestor_uid = ? AND r.depth = ? AND r.referral_ancestor_sub_id = ? `;
+                       WHERE r.referral_ancestor_uid = ? AND r.depth = ? AND r.referral_ancestor_sub_id = ?`;
         const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
-        const results: [] = await referralRepository.query(query, [uid, REFERRAL_DEPTH_INDIRECT,subscriptionId])
+        const results: [] = await referralRepository.query(query, [uid, +REFERRAL_DEPTH_INDIRECT,subscriptionId])
         this.logger.debug(`Found ${results.length} indirect referrals for user ${uid}`)
         for (const row of results) {
             const referralDto = new ReferralDto()
