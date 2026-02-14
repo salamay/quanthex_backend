@@ -527,9 +527,10 @@ export class ProductsService {
     //This only return data for ancestors
     async getIndirectReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
         this.logger.debug("Getting indirect referrals for user ", uid)
+        this.logger.debug("Subscription ID: ", subscriptionId)
         const referrals: ReferralDto[] = []
         const query = `SELECT * FROM referrals r
-                       LEFT JOIN profiles p ON r.referral_ancestor_uid = p.uid
+                       LEFT JOIN profiles p ON r.referral_ancestor_uid = p.uid 
                        WHERE r.referral_ancestor_uid = ? AND r.referral_ancestor_sub_id = ?`;
         const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
         const results: [] = await referralRepository.query(query, [uid, ,subscriptionId])
