@@ -494,6 +494,16 @@ export class ProductsService {
             throw new InternalServerErrorException('Failed to get subscription by mining tag');
         }
     }
+    async getSubscriptionById(subscriptionId: string): Promise<SubscriptionEntity> {
+        try {
+            const subscriptionRepository = this.dataSource.manager.getRepository(SubscriptionEntity)
+            const subscription = await subscriptionRepository.findOne({ where: { sub_id: subscriptionId } })
+            return subscription;
+        } catch (err) {
+            console.error('Error getting subscription by id:', err);
+            throw new InternalServerErrorException('Failed to get subscription by id');
+        }
+    }
     async getSubscriptionReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
         this.logger.debug("Getting referrals for user ", uid)
         const referrals: ReferralDto[] = []
@@ -518,7 +528,7 @@ export class ProductsService {
         const referrals: ReferralDto[] = []
         const query = `SELECT * FROM referrals r
                        LEFT JOIN profiles p ON r.referral_ancestor_uid = p.uid
-                       WHERE r.referral_uid = ? AND r.depth = ? AND r.referral_ancestor_sub_id = ?`;
+                       WHERE r.referral_uid = ? AND r.depth = ? AND r.referral_subscription_id = ?`;
         const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
         const results: [] = await referralRepository.query(query, [uid, +REFERRAL_DEPTH_INDIRECT,subscriptionId])
         this.logger.debug(`Found ${results.length} indirect referrals for user ${uid}`)
