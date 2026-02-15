@@ -506,6 +506,7 @@ export class ProductsService {
     }
     async getSubscriptionReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
         this.logger.debug("Getting referrals for user ", uid)
+        this.logger.debug("Subscription ID: ", subscriptionId)
         const referrals: ReferralDto[] = []
         const query = `SELECT * FROM referrals r 
                        LEFT JOIN profiles p ON r.referree_uid = p.uid
