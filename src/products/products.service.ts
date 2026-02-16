@@ -71,10 +71,10 @@ export class ProductsService {
         if (walletExists) {
             throw new UnprocessableEntityException('Wallet already in use, please use a different wallet');
         }
-        const hasReferred = await this.hasReferredSomeone(fromSubscription.uid, uid);
-        if (hasReferred) {
-            throw new UnprocessableEntityException('You have already referred this user or you have this user as your descendant');
-        }
+        // const hasReferred = await this.hasReferredSomeone(fromSubscription.uid, uid);
+        // if (hasReferred) {
+        //     throw new UnprocessableEntityException('You have already referred this user or you have this user as your descendant');
+        // }
         // const hasBeenReferredBefore = await this.hasBeenReferredBefore(fromSubscription.uid);
         // if (hasBeenReferredBefore) {
         //     throw new UnprocessableEntityException('You cannot refer this user again as this user has already been referred before');
