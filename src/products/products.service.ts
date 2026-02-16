@@ -165,9 +165,9 @@ export class ProductsService {
         this.sendPushNotification(uid, 'Mining Created', `Your mining has been created successfully`, miningEntity);
         const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
         if (fromSubscription != null) {
-            const referralUid = fromSubscription.uid
+            const referralUid = uid
             //Get the ancestor of the user
-            const ancestorReferral = await this.getAncestor(referralUid)
+            const ancestorReferral = await this.getAncestor(fromSubscription.uid)
             
             const ref = new ReferralEntity()
             ref.referral_id = MyUtils.generateUUID()
