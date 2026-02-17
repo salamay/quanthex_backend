@@ -60,13 +60,12 @@ export class UsersService {
 
     async getDirectReferrals(uid: string): Promise<ReferralDto[]> {
         this.logger.debug("Getting referrals for user ",uid)
-        const depth = REFERRAL_DEPTH_DIRECT;
         const referrals: ReferralDto[]=[]
         const query = `SELECT * FROM referrals r
                        LEFT JOIN profiles p ON r.referree_uid = p.uid
-                       WHERE referral_uid = ? AND depth = ? `;
+                       WHERE referral_uid = ?`;
         try {
-            const results: [] = await this.userManager.referralRepository.query(query, [uid, +depth])
+            const results: [] = await this.userManager.referralRepository.query(query, [uid])
             this.logger.debug(`Found ${results.length} referrals for user ${uid}`)
             for (const row of results) {
                 const referralDto = new ReferralDto()

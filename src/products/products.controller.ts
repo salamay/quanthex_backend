@@ -29,21 +29,21 @@ export class ProductsController {
     }
 
     @Get('minings')
-    async getUserMinings(@Request() req):Promise<any>{
+    async getUserMinings(@Request() req, @Query('walletAddress') walletAddress: string):Promise<any>{
         const { uid, email} = req.user;
             if (!uid) {
               throw new UnauthorizedException('Missing user id on request');
             }
-        return await this.productsService.getMiningRecords(uid);
+        return await this.productsService.getMiningRecords(uid, walletAddress);
     }
     
     @Get('stakings')
-    async getUserStakings(@Request() req):Promise<any>{
+    async getUserStakings(@Request() req, @Query('walletAddress') walletAddress: string, @Query('stakingStatus') stakingStatus: string):Promise<any>{
         const { uid, email} = req.user;
             if (!uid) {
               throw new UnauthorizedException('Missing user id on request');
             }
-        return await this.productsService.getStakingRecords(uid);
+        return await this.productsService.getStakingRecords(uid, walletAddress, stakingStatus);
     }
 
     @Post('withdraw')
@@ -56,12 +56,12 @@ export class ProductsController {
     }
 
     @Get('withdrawals')
-    async getUserWithdrawals(@Request() req):Promise<any>{
+    async getUserWithdrawals(@Request() req, @Query('stakingId') stakingId: string):Promise<any>{
         const { uid, email} = req.user;
             if (!uid) {
               throw new UnauthorizedException('Missing user id on request');
             }
-        return await this.productsService.getWithdrawalRecords(uid);
+        return await this.productsService.getWithdrawalRecords(uid, stakingId);
     }
 
     @Get("subscription-direct-referrals")

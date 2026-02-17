@@ -15,8 +15,6 @@ export class MiningEntity{
     @Column()
     min_subscription_id:string
     @Column()
-    hash_rate:string
-    @Column()
     mining_tag:string
     @Column()
     mining_wallet_hash:string

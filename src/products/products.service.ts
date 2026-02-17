@@ -67,10 +67,10 @@ export class ProductsService {
         if (!this.checkIfProductIsSame(fromSubscription.sub_package_name, payload.sub_package_name)) {
             throw new UnprocessableEntityException(`You cannot subscribe to a different product, please use the same product as your upline: ${fromSubscription.sub_package_name}`);
         }
-        const walletExists = await this.checkIfWalletExistsInSub(payload.sub_wallet_hash)
-        if (walletExists) {
-            throw new UnprocessableEntityException('Wallet already in use, please use a different wallet');
-        }
+        // const walletExists = await this.checkIfWalletExistsInSub(payload.sub_wallet_hash)
+        // if (walletExists) {
+        //     throw new UnprocessableEntityException('Wallet already in use, please use a different wallet');
+        // }
         // const hasReferred = await this.hasReferredSomeone(fromSubscription.uid, uid);
         // if (hasReferred) {
         //     throw new UnprocessableEntityException('You have already referred this user or you have this user as your descendant');
@@ -143,7 +143,6 @@ export class ProductsService {
                miningEntity.min_created_at = BigInt(timestamp);
                miningEntity.min_updated_at = BigInt(timestamp);
                miningEntity.min_subscription_id = payload.sub_id;
-               miningEntity.hash_rate = ProductUtils.LEVEL_ONE_HASHRATE.toString();
                miningEntity.mining_tag = payload.sub_mining_tag;
                const miningRepo = manager.getRepository(MiningEntity);
                return await miningRepo.save(miningEntity);
@@ -165,9 +164,10 @@ export class ProductsService {
         this.sendPushNotification(uid, 'Mining Created', `Your mining has been created successfully`, miningEntity);
         const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
         if (fromSubscription != null) {
-            const referralUid = uid
-            //Get the ancestor of the user
-            const ancestorReferral = await this.getAncestor(fromSubscription.uid)
+            //Referral uid is always from the creator of the subscription
+            const referralUid = fromSubscription.uid
+            //Get the ancestor of the user (The creator of the subscription)
+            const ancestorReferral = await this.getAncestor(referralUid)
             
             const ref = new ReferralEntity()
             ref.referral_id = MyUtils.generateUUID()
@@ -205,15 +205,14 @@ export class ProductsService {
             const totalReferrals = directReferrals.length + indirectReferrals.length
             this.logger.debug(`User ${referralProfile.uid} now has ${directReferrals.length} direct referrals and ${indirectReferrals.length} indirect referrals.`);
             this.logger.debug(`User ${referralProfile.uid} now has ${totalReferrals} referrals.`);
-            const miningRecord = await this.getMiningRecords(referralProfile.uid)
-            if (miningRecord.length !== null) {
+            const miningRecord = await this.getMining(fromSubscription.sub_id)
+            if (miningRecord.length > 0) {
                 this.logger.debug(`Mining records found for user: ${referralProfile.uid}`);
                 const miningDto = miningRecord.at(0)
                 if (miningDto != null) {
                     this.logger.debug(`Changing hash rate for user: ${referralProfile.uid}`);
-                    const hashRate = ProductUtils.getHashRate(totalReferrals)
+                    const hashRate = ProductUtils.getHashRate(totalReferrals, fromSubscription.sub_package_name)
                     const miningEntity = miningDto.mining
-                    miningEntity.hash_rate = hashRate.toString()
                     const miningRepo = this.dataSource.getRepository(MiningEntity);
                     await miningRepo.save(miningEntity);
                     this.sendPushNotification(referralProfile.uid, 'Hash Rate Updated', `Your hash rate has been updated to ${hashRate}`, miningEntity);
@@ -229,10 +228,10 @@ export class ProductsService {
     async createStakingRecord(uid: string, email: string, payload: StakingPayload): Promise<StakingEntity>{
         console.log(`Creating staking record for user: ${uid}`);
         const timestamp = Date.now();
-        const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
-        if (!status) {
-            throw new UnprocessableEntityException('Transaction submission failed');
-        }
+        // const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
+        // if (!status) {
+        //     throw new UnprocessableEntityException('Transaction submission failed');
+        // }
         const stakingEntity = await this.dataSource.transaction(async manager=>{
             try{
                 const staking_id = MyUtils.generateUUID();
@@ -263,14 +262,14 @@ export class ProductsService {
         return stakingEntity;
     }
 
-    async getMiningRecords(uid: string):Promise<MiningDto[]>{
+    async getMiningRecords(uid: string, walletAddress: string):Promise<MiningDto[]>{
         console.log(`Fetching mining records for user: ${uid}`);
         const query=`SELECT s.*, m.* FROM subscriptions s 
         LEFT JOIN minings m ON s.sub_id = m.min_subscription_id 
-        WHERE s.uid = ? ORDER BY s.sub_created_at DESC`;
+        WHERE s.uid = ? AND s.sub_wallet_hash = ? ORDER BY s.sub_created_at DESC`;
         const miningsDto: MiningDto[] = [];
         try{
-            const results: [] = await this.productsManager.subscriptionRepo.query(query, [uid]);
+            const results: [] = await this.productsManager.subscriptionRepo.query(query, [uid, walletAddress]);
             console.log('Mining records fetched:', results.length);
             for (const row of results) {
                 const miningDto = new MiningDto();
@@ -291,11 +290,41 @@ export class ProductsService {
         }
    
     }
-    async getStakingRecords(uid: string):Promise<StakingEntity[]>{
+
+
+    async getMining(subscriptionId: string): Promise<MiningDto[]> {
+        console.log(`Fetching mining records for subscription: ${subscriptionId}`);
+        const query = `SELECT s.*, m.* FROM subscriptions s 
+        LEFT JOIN minings m ON s.sub_id = m.min_subscription_id 
+        WHERE s.sub_id = ? ORDER BY s.sub_created_at DESC`;
+        const miningsDto: MiningDto[] = [];
+        try {
+            const results: [] = await this.productsManager.subscriptionRepo.query(query, [subscriptionId]);
+            console.log('Mining records fetched:', results.length);
+            for (const row of results) {
+                const miningDto = new MiningDto();
+                miningDto.subscription = row as SubscriptionEntity
+                let mining: MiningEntity | null = null;
+                miningDto.mining = null;
+                if (row['min_id'] != null) {
+                    mining = MiningMapper.toEntity(row)
+                    miningDto.mining = mining
+                }
+
+                miningsDto.push(miningDto);
+            }
+            return miningsDto;
+        } catch (err) {
+            console.error('Error fetching mining records:', err);
+            throw new InternalServerErrorException('Failed to fetch mining records');
+        }
+
+    }
+    async getStakingRecords(uid: string, walletAddress: string, stakingStatus: string):Promise<StakingEntity[]>{
         console.log(`Fetching staking records for user: ${uid}`);
         try{
             return await this.productsManager.stakingRepo.find({
-                where:{uid:uid,staking_status:Active},
+                where: { uid: uid,staking_wallet_hash:walletAddress,staking_status:stakingStatus},
                 order:{stake_created_at:"DESC"}
             });
         }catch(err){
@@ -304,11 +333,11 @@ export class ProductsService {
         }
     }
 
-    async getWithdrawalRecords(uid: string):Promise<WithdrawalEntity[]>{
+    async getWithdrawalRecords(uid: string, stakingId: string):Promise<WithdrawalEntity[]>{
         console.log(`Fetching withdrawal records for user: ${uid}`);
         try{
             return await this.productsManager.withdrawalRepo.find({
-                where:{uid:uid},
+                where:{uid:uid,staking_id:stakingId},
                 order:{withdrawal_created_at:"DESC"}
             });
         }catch(err){
