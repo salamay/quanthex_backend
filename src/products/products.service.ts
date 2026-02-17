@@ -80,11 +80,11 @@ export class ProductsService {
         //     throw new UnprocessableEntityException('You cannot refer this user again as this user has already been referred before');
         // }
 
-        // const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
-        // const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
-        // if (!status){
-        //     throw new UnprocessableEntityException('Transaction submission failed');
-        // }
+        const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
+        const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
+        if (!status){
+            throw new UnprocessableEntityException('Transaction submission failed');
+        }
         payload.email = email;
         const subType=payload.sub_type;
         return await this.dataSource.transaction(async manager => {
@@ -228,10 +228,10 @@ export class ProductsService {
     async createStakingRecord(uid: string, email: string, payload: StakingPayload): Promise<StakingEntity>{
         console.log(`Creating staking record for user: ${uid}`);
         const timestamp = Date.now();
-        // const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
-        // if (!status) {
-        //     throw new UnprocessableEntityException('Transaction submission failed');
-        // }
+        const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
+        if (!status) {
+            throw new UnprocessableEntityException('Transaction submission failed');
+        }
         const stakingEntity = await this.dataSource.transaction(async manager=>{
             try{
                 const staking_id = MyUtils.generateUUID();
