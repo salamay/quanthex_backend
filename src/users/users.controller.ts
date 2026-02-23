@@ -21,15 +21,15 @@ export class UsersController {
     return await this.userService.getProfileByUid(uid);
   }
 
-  @Get("referrals")
-  async getReferrals(@Request() req): Promise<any> {
-    const uid = req.user?.uid;
-    console.log('Fetching referrals for user:', uid);
-    if (!uid) {
-      throw new UnauthorizedException('Missing user id on request');
-    }
-    return await this.userService.getDirectReferrals(uid);
-  }
+  // @Get("referrals")
+  // async getReferrals(@Request() req): Promise<any> {
+  //   const uid = req.user?.uid;
+  //   console.log('Fetching referrals for user:', uid);
+  //   if (!uid) {
+  //     throw new UnauthorizedException('Missing user id on request');
+  //   }
+  //   return await this.userService.getDirectReferrals(uid);
+  // }
 
 
 

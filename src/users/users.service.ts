@@ -58,28 +58,29 @@ export class UsersService {
 
     }
 
-    async getDirectReferrals(uid: string): Promise<ReferralDto[]> {
-        this.logger.debug("Getting referrals for user ",uid)
-        const referrals: ReferralDto[]=[]
-        const query = `SELECT * FROM referrals r
-                       LEFT JOIN profiles p ON r.referree_uid = p.uid
-                       WHERE referral_uid = ?`;
-        try {
-            const results: [] = await this.userManager.referralRepository.query(query, [uid])
-            this.logger.debug(`Found ${results.length} referrals for user ${uid}`)
-            for (const row of results) {
-                const referralDto = new ReferralDto()
-                const referralEntity = ReferralEntityMapper.toEntity(row);
-                const referreeEntity = ProfileMapper.toEntity(row);
-                referralDto.info = referralEntity
-                referralDto.profile = referreeEntity
-                referrals.push(referralDto)
-            }
-        } catch (err) {
-            throw new UnprocessableEntityException('An error occurred while processing your request');
-        }
-        return referrals;
-    }
+    // async getDirectReferrals(uid: string): Promise<ReferralDto[]> {
+    //     this.logger.debug("Getting referrals for user ",uid)
+    //     const referrals: ReferralDto[]=[]
+        
+    //     const query = `SELECT * FROM referrals r
+    //                    LEFT JOIN profiles p ON r.referree_uid = p.uid
+    //                    WHERE referral_uid = ? AND FIND_IN_SET('B', referrals)`;
+    //     try {
+    //         const results: [] = await this.userManager.referralRepository.query(query, [uid])
+    //         this.logger.debug(`Found ${results.length} referrals for user ${uid}`)
+    //         for (const row of results) {
+    //             const referralDto = new ReferralDto()
+    //             const referralEntity = ReferralEntityMapper.toEntity(row);
+    //             const referreeEntity = ProfileMapper.toEntity(row);
+    //             referralDto.info = referralEntity
+    //             referralDto.profile = referreeEntity
+    //             referrals.push(referralDto)
+    //         }
+    //     } catch (err) {
+    //         throw new UnprocessableEntityException('An error occurred while processing your request');
+    //     }
+    //     return referrals;
+    // }
 
     async refferalCodeUser(referralCode: string): Promise<ProfileEntity>{
         this.logger.debug("getting user this referral belongs to ", referralCode)

@@ -74,13 +74,4 @@ export class ProductsController {
         return await this.productsService.getSubscriptionReferrals(uid, subscriptionId);
     }
 
-    @Get("subscription-indirect-referrals")
-    async getIndirectReferrals(@Request() req, @Query('subscriptionId') subscriptionId: string): Promise<any> {
-        const uid = req.user?.uid;
-        console.log('Fetching indirect referrals for user:', uid);
-        if (!uid) {
-            throw new UnauthorizedException('Missing user id on request');
-        }
-        return await this.productsService.getIndirectReferrals(uid, subscriptionId);
-    }
 }

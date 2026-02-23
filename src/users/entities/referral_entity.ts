@@ -10,17 +10,17 @@ export class ReferralEntity {
     referree_uid: string
     @Column({ nullable: false })
     referral_subscription_id: string
+    @Column({ nullable: false })
+    referree_subscription_id: string
     @Column({ nullable: false, type: 'bigint' })
     referral_created_at: BigInt
     @Column({ nullable: false, type: 'bigint' })
     referral_updated_at: BigInt
     @Column({ nullable: true })
-    referral_ancestor_uid: string
-    @Column({ nullable: true })
     referral_descendant_uid: string
     @Column({ nullable: true })
     depth: number
-    @Column({ nullable: true })
-    referral_ancestor_sub_id: string
+    @Column({ type: 'json', nullable: true })
+    referral_path: string[]
 
 }
