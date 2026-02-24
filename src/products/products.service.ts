@@ -141,6 +141,8 @@ export class ProductsService {
                miningRecord.min_updated_at = BigInt(timestamp);
                miningRecord.min_subscription_id = newSub.sub_id;
                miningRecord.mining_tag = payload.sub_mining_tag;
+               miningRecord.mining_wallet_hash = payload.sub_wallet_hash;
+               miningRecord.mining_wallet_address = payload.sub_wallet_address;
                const miningRepo = manager.getRepository(MiningEntity);
                const miningEntity = await miningRepo.save(miningRecord);
                const notification: NotificationEntity = new NotificationEntity();

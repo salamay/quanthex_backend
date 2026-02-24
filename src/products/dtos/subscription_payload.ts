@@ -25,4 +25,5 @@ export class SubscriptionPayload {
     sub_referral_code: string
     sub_mining_tag: string
     sub_wallet_hash: string
+    sub_wallet_address: string
 }
