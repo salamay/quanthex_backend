@@ -80,11 +80,11 @@ export class ProductsService {
         //     throw new UnprocessableEntityException('You cannot refer this user again as this user has already been referred before');
         // }
 
-        const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
-        const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
-        if (!status){
-            throw new UnprocessableEntityException('Transaction submission failed');
-        }
+        // const rpc=NetworkUtils.getRpc(payload.sub_chain_id)
+        // const status: Boolean = await this.submitTransaction(uid, payload.sub_signed_tx, rpc)
+        // if (!status){
+        //     throw new UnprocessableEntityException('Transaction submission failed');
+        // }
         payload.email = email;
         return await this.createMiningRecord(uid, email, payload, fromSubscription.sub_id);
     }
@@ -188,7 +188,7 @@ export class ProductsService {
                    await referralRepository.save(ref)
                    const referralProfile = await this.userService.getProfileByUid(referralUid)
                    this.logger.debug(`Referral recorded: ${referralProfile.uid} referred ${uid}`);
-                   const directReferrals = await this.getSubscriptionReferrals(referralProfile.uid, fromSubscription.sub_id)
+                   const directReferrals = await this.getDirectReferrals(referralProfile.uid, fromSubscription.sub_id)
                    const totalReferrals = directReferrals.length
                    this.logger.debug(`User ${referralProfile.uid} now has ${totalReferrals} referrals.`);
                    const miningRecord = await this.getMining(fromSubscription.sub_id)
@@ -524,11 +524,11 @@ export class ProductsService {
             throw new InternalServerErrorException('Failed to get subscription by id');
         }
     }
-    async getSubscriptionReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
+    async getAllSubscriptionReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
         this.logger.debug("Getting referrals for user ", uid)
         this.logger.debug("Subscription ID: ", subscriptionId)
         const referrals: ReferralDto[] = []
-        const query = `SELECT * FROM referrals r 
+        const query = `SELECT * FROM referrals r
                        LEFT JOIN profiles p ON r.referree_uid = p.uid
                        WHERE JSON_CONTAINS(r.referral_path, '["${subscriptionId}"]')`;
         const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
@@ -545,47 +545,48 @@ export class ProductsService {
         return referrals;
     }
 
-    //This only return data for ancestors
-    // async getIndirectReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
-    //     this.logger.debug("Getting indirect referrals for user ", uid)
-    //     this.logger.debug(`Subscription ID: ${subscriptionId}`)
-    //     const referrals: ReferralDto[] = []
-    //     const query = `SELECT * FROM referrals r
-    //                    LEFT JOIN profiles p ON r.referral_ancestor_uid = p.uid 
-    //                    WHERE r.referral_ancestor_uid = ? AND r.referral_ancestor_sub_id = ? AND r.depth = ?`;
-    //     const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
-    //     const results: [] = await referralRepository.query(query, [uid, subscriptionId, +REFERRAL_DEPTH_INDIRECT])
-    //     this.logger.debug(`Found ${results.length} indirect referrals for user ${uid}`)
-    //     for (const row of results) {
-    //         const referralDto = new ReferralDto()
-    //         const referralEntity = ReferralEntityMapper.toEntity(row);
-    //         const referreeEntity = ProfileMapper.toEntity(row);
-    //         referralDto.info = referralEntity
-    //         referralDto.profile = referreeEntity
-    //         referrals.push(referralDto)
-    //     }
-    //     return referrals;
-    // }
-  
+    async getIndirectReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
+        this.logger.debug("Getting indirect referrals for user ", uid)
+        this.logger.debug("Subscription ID: ", subscriptionId)
+        const referrals: ReferralDto[] = []
+        const query = `SELECT * FROM referrals r
+                       LEFT JOIN profiles p ON r.referree_uid = p.uid
+                       WHERE JSON_CONTAINS(r.referral_path, '["${subscriptionId}"]') AND r.referral_uid != ?`;
+        const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
+        const results: [] = await referralRepository.query(query, [uid])
+        this.logger.debug(`Found ${results.length} indirect referrals for user ${uid}`)
+        for (const row of results) {
+            const referralDto = new ReferralDto()
+            const referralEntity = ReferralEntityMapper.toEntity(row);
+            const referreeEntity = ProfileMapper.toEntity(row);
+            referralDto.info = referralEntity
+            referralDto.profile = referreeEntity
+            referrals.push(referralDto)
+        }
+        return referrals;
+    }
+    async getDirectReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
+        this.logger.debug("Getting direct referrals for user ", uid)
+        this.logger.debug(`Subscription ID: ${subscriptionId}`)
+        const referrals: ReferralDto[] = []
+        const query = `SELECT * FROM referrals r
+                       LEFT JOIN profiles p ON r.referree_uid = p.uid 
+                       WHERE r.referral_uid = ? AND r.referral_subscription_id = ?`;
+        const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
+        const results: [] = await referralRepository.query(query, [uid, subscriptionId])
+        this.logger.debug(`Found ${results.length} direct referrals for user ${uid}`)
+        for (const row of results) {
+            const referralDto = new ReferralDto()
+            const referralEntity = ReferralEntityMapper.toEntity(row);
+            const referreeEntity = ProfileMapper.toEntity(row);
+            referralDto.info = referralEntity
+            referralDto.profile = referreeEntity
+            referrals.push(referralDto)
+        }
+        return referrals;
+    }
 
-    // async getAncestor(referreeUid: string): Promise<ReferralEntity | null> {
-    //     try{
-    //         //This should return the very first ancestor of the user
-    //         const query = "SELECT * FROM referrals WHERE referree_uid = ? AND referral_ancestor_uid IS NOT NULL ORDER BY referral_created_at ASC LIMIT 1";
-    //         const results: any[] = await this.dataSource.manager.getRepository(ReferralEntity).query(query, [referreeUid]);
-    //         if (results.length > 0) {
-    //             this.logger.debug(`Ancestor found for user ${referreeUid}: ${results[0].referral_ancestor_uid}`);
-    //             const referralEntity = ReferralEntityMapper.toEntity(results[0]);
-    //             return referralEntity;
-    //         }else{
-    //             console.log(`No ancestor found for user ${referreeUid}`);
-    //             return null;
-    //         }
-    //     } catch (err) {
-    //         this.logger.error(`Error getting ancestor: ${referreeUid}`, err);
-    //         throw new UnprocessableEntityException('An error occurred');
-    //     }
-    // }
+
 
     async getPath(subId: string): Promise<any[]> {
         // Since we are working with a tree structure, we need to get the path of the subscription id e.g A->B->C

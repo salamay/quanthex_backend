@@ -64,14 +64,32 @@ export class ProductsController {
         return await this.productsService.getWithdrawalRecords(uid, stakingId);
     }
 
+    // @Get("subscription-direct-referrals")
+    // async getSubscriptionReferrals(@Request() req, @Query('subscriptionId') subscriptionId: string): Promise<any> {
+    //     const uid = req.user?.uid;
+    //     console.log('Fetching referrals for user:', uid);
+    //     if (!uid) {
+    //         throw new UnauthorizedException('Missing user id on request');
+    //     }
+    //     return await this.productsService.getSubscriptionReferrals(uid, subscriptionId);
+    // }
     @Get("subscription-direct-referrals")
-    async getSubscriptionReferrals(@Request() req, @Query('subscriptionId') subscriptionId: string): Promise<any> {
+    async getSubscriptionDirectReferrals(@Request() req, @Query('subscriptionId') subscriptionId: string): Promise<any> {
         const uid = req.user?.uid;
-        console.log('Fetching referrals for user:', uid);
+        console.log('Fetching direct referrals for user:', uid);
         if (!uid) {
             throw new UnauthorizedException('Missing user id on request');
         }
-        return await this.productsService.getSubscriptionReferrals(uid, subscriptionId);
+        return await this.productsService.getDirectReferrals(uid, subscriptionId);
     }
 
+    @Get("subscription-indirect-referrals")
+    async getSubscriptionIndirectReferrals(@Request() req, @Query('subscriptionId') subscriptionId: string): Promise<any> {
+        const uid = req.user?.uid;
+        console.log('Fetching indirect referrals for user:', uid);
+        if (!uid) {
+            throw new UnauthorizedException('Missing user id on request');
+        }
+        return await this.productsService.getIndirectReferrals(uid, subscriptionId);
+    }
 }
