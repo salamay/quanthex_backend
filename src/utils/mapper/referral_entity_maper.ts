@@ -13,6 +13,7 @@ export class ReferralEntityMapper {
         referral.referral_updated_at = data.referral_updated_at;
         referral.referral_descendant_uid = data.referral_descendant_uid;
         referral.depth = data.depth;
+        referral.referral_path = data.referral_path;
         return referral;
     }
 
