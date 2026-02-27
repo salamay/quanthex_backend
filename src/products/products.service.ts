@@ -27,6 +27,7 @@ import { ProfileEntity } from 'src/users/entities/profile_entity';
 import { ReferralDto } from 'src/users/dtos/referral_dto';
 import { ProfileMapper } from 'src/users/mapper/profile_mapper';
 import { ReferralEntityMapper } from 'src/utils/mapper/referral_entity_maper';
+import { StakingReferralsEntity } from './entities/staking_referrals';
 
 @Injectable()
 export class ProductsService {
@@ -218,11 +219,28 @@ export class ProductsService {
 
     async createStakingRecord(uid: string, email: string, payload: StakingPayload): Promise<StakingEntity>{
         console.log(`Creating staking record for user: ${uid}`);
-        const timestamp = Date.now();
-        const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
-        if (!status) {
-            throw new UnprocessableEntityException('Transaction submission failed');
+
+        const referralCode = payload.staking_referral_code
+        if (referralCode == null) {
+            throw new UnprocessableEntityException('Referral code is required');
         }
+        const referralStaking = await this.getStakingByReferralCode(referralCode)
+        if (referralStaking == null) {
+            throw new UnprocessableEntityException('Staking referral not found');
+        }
+        const referralProfile = await this.userService.getProfileByUid(referralStaking.uid)
+        if (referralProfile == null) {
+            throw new UnprocessableEntityException('Referral profile not found');
+        }
+        if (referralProfile.uid == uid) {
+            throw new UnprocessableEntityException('You cannot stake with your own referral code');
+        }
+        const timestamp = Date.now();
+        // const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
+        // if (!status) {
+        //     throw new UnprocessableEntityException('Transaction submission failed');
+        // }
+      
         const stakingEntity = await this.dataSource.transaction(async manager=>{
             try{
                 const staking_id = MyUtils.generateUUID();
@@ -230,9 +248,21 @@ export class ProductsService {
                 data.stake_created_at = BigInt(timestamp);
                 data.stake_updated_at = BigInt(timestamp);
                 data.staking_status = Active;
+                data.staking_referral_code = MyUtils.generateLetterCode(9);
                 const stakingRepo = manager.getRepository(StakingEntity);
                 const entity = stakingRepo.create(data as StakingEntity);
-                return await stakingRepo.save(entity);
+                const saved = await stakingRepo.save(entity);
+                const referral = new StakingReferralsEntity();
+                referral.staking_referral_id = MyUtils.generateUUID();
+                referral.staking_referral_uid = referralProfile.uid;
+                referral.staking_referree_uid = uid;
+                referral.staking_referral_staking_id = referralStaking.staking_id;
+                referral.staking_referree_staking_id = saved.staking_id;
+                referral.staking_referral_created_at = BigInt(timestamp);
+                referral.staking_referral_updated_at = BigInt(timestamp);
+                const referralRepository = manager.getRepository(StakingReferralsEntity);
+                await referralRepository.save(referral);
+                return saved;
             }catch(err){
                 console.error('Error creating staking record:', err);
                 throw new InternalServerErrorException('Failed to create staking');
@@ -323,7 +353,17 @@ export class ProductsService {
             throw new InternalServerErrorException('Failed to fetch staking records');
         }
     }
-
+    async getStakingByReferralCode(referralCode: string): Promise<StakingEntity>{
+        console.log(`Fetching staking record for referral code: ${referralCode}`);
+        try{
+            return await this.productsManager.stakingRepo.findOne({
+                where: { staking_referral_code: referralCode }
+            });
+        }catch(err){
+            console.error('Error fetching staking record for referral code:', err);
+            throw new InternalServerErrorException('Failed to fetch staking record for referral code');
+        }
+    }
     async getWithdrawalRecords(uid: string, stakingId: string):Promise<WithdrawalEntity[]>{
         console.log(`Fetching withdrawal records for user: ${uid}`);
         try{
@@ -584,6 +624,17 @@ export class ProductsService {
             referrals.push(referralDto)
         }
         return referrals;
+    }
+
+    async getStakingReferrals(stakingId: string): Promise<StakingReferralsEntity[]> {
+        try{
+            const query = "SELECT * FROM staking_referrals WHERE staking_referral_staking_id = ?";
+            const results: [] = await this.dataSource.manager.getRepository(StakingReferralsEntity).query(query, [stakingId]);
+            return results;
+        }catch(err){
+            console.error('Error getting staking referrals:', err);
+            throw new InternalServerErrorException('Failed to get staking referrals');
+        }
     }
 
 

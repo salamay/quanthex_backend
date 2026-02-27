@@ -92,4 +92,14 @@ export class ProductsController {
         }
         return await this.productsService.getIndirectReferrals(uid, subscriptionId);
     }
+
+    @Get("staking-referrals")
+    async getStakingReferrals(@Request() req, @Query('stakingId') stakingId: string): Promise<any> {
+        const uid = req.user?.uid;
+        console.log('Fetching staking referrals for user:', uid);
+        if (!uid) {
+            throw new UnauthorizedException('Missing user id on request');
+        }
+        return await this.productsService.getStakingReferrals(stakingId);
+    }
 }

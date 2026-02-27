@@ -15,10 +15,11 @@ import { UserManager } from 'src/users/user_manager';
 import { ReferralEntity } from 'src/users/entities/referral_entity';
 import { ProfileEntity } from 'src/users/entities/profile_entity';
 import { LoggedDevice } from 'src/auth/entities/logged_device';
+import { StakingReferralsEntity } from './entities/staking_referrals';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SubscriptionEntity, StakingEntity, WithdrawalEntity, NotificationEntity,ReferralEntity,ProfileEntity,UserEntity,LoggedDevice]),
+    TypeOrmModule.forFeature([SubscriptionEntity, StakingEntity, WithdrawalEntity, NotificationEntity, ReferralEntity,StakingReferralsEntity,ProfileEntity,UserEntity,LoggedDevice]),
   ],
   providers: [ProductsService, ProductsManager,NotificationService,UsersService,PushService,UserManager],
   controllers: [ProductsController]

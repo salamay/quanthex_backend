@@ -21,6 +21,7 @@ import { WithdrawalEntity } from './products/entities/withdrawal_entity';
 import { ReferralEntity } from './users/entities/referral_entity';
 import { NotificationModule } from './notification/notification.module';
 import { NotificationEntity } from './notification/entities/Notification_entity';
+import { StakingReferralsEntity } from './products/entities/staking_referrals';
 
 @Module({
   imports: [
@@ -40,7 +41,7 @@ import { NotificationEntity } from './notification/entities/Notification_entity'
         database: configService.get<string>('DB_NAME'),
         bigNumberStrings: true,
         entities:[                
-          UserEntity, ProfileEntity, LoggedDevice, SubscriptionEntity, MiningEntity, StakingEntity, WithdrawalEntity, ReferralEntity, NotificationEntity
+          UserEntity, ProfileEntity, LoggedDevice, SubscriptionEntity, MiningEntity, StakingEntity, WithdrawalEntity, ReferralEntity, StakingReferralsEntity, NotificationEntity
         ],
         synchronize: false,
       })
