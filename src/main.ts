@@ -8,7 +8,7 @@ async function bootstrap() {
     return this.toString();
   };
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('v1/api');
   app.useGlobalGuards(new JwtAuthGuard());
   app.useGlobalInterceptors(new MyInterceptorsInterceptor());
   await app.listen(process.env.PORT ?? 5790);

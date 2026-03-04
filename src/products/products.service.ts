@@ -161,7 +161,7 @@ export class ProductsService {
                if (fromSubscription != null) {
                    //Referral uid is always from the creator of the subscription
                    const referralUid = fromSubscription.uid
-                   //Get the path of the referral
+                   //Get the path of the subscription
                    const path: any[] = await this.getPath(fromSubscriptionId)
                    console.log(`Path for subscription id ${fromSubscriptionId}: ${path}`);
                    const ref = new ReferralEntity()
