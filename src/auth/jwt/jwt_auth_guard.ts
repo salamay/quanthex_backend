@@ -19,9 +19,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         console.log(`Request URL: ${url}`);
 
         const exemptedRoutes = [
-            '/api/auth/signIn',
-            '/api/auth/register',
-            '/api/auth/login',
+            '/v1/api/auth/signIn',
+            '/v1/api/auth/register',
+            '/v1/api/auth/login',
             /^\/sse\/.*/,
         ];
 
