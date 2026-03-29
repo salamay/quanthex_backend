@@ -294,10 +294,10 @@ export class ProductsService {
             throw new UnprocessableEntityException('You cannot stake with your own referral code');
         }
         const timestamp = Date.now();
-        // const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
-        // if (!status) {
-        //     throw new UnprocessableEntityException('Transaction submission failed');
-        // }
+        const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
+        if (!status) {
+            throw new UnprocessableEntityException('Transaction submission failed');
+        }
 
         const stakingEntity = await this.dataSource.transaction(async manager => {
             try {
