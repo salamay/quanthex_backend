@@ -279,20 +279,20 @@ export class ProductsService {
     async createStakingRecord(uid: string, email: string, payload: StakingPayload): Promise<StakingEntity> {
         console.log(`Creating staking record for user: ${uid}`);
         const referralCode = payload.staking_referral_code
-        // if (referralCode == null) {
-        //     throw new UnprocessableEntityException('Referral code is required');
-        // }
-        // const referralStaking = await this.getStakingByReferralCode(referralCode)
-        // if (referralStaking == null) {
-        //     throw new UnprocessableEntityException('Staking referral not found');
-        // }
-        // const referralProfile = await this.userService.getProfileByUid(referralStaking.uid)
-        // if (referralProfile == null) {
-        //     throw new UnprocessableEntityException('Referral profile not found');
-        // }
-        // if (referralProfile.uid == uid) {
-        //     throw new UnprocessableEntityException('You cannot stake with your own referral code');
-        // }
+        if (referralCode == null) {
+            throw new UnprocessableEntityException('Referral code is required');
+        }
+        const referralStaking = await this.getStakingByReferralCode(referralCode)
+        if (referralStaking == null) {
+            throw new UnprocessableEntityException('Staking referral not found');
+        }
+        const referralProfile = await this.userService.getProfileByUid(referralStaking.uid)
+        if (referralProfile == null) {
+            throw new UnprocessableEntityException('Referral profile not found');
+        }
+        if (referralProfile.uid == uid) {
+            throw new UnprocessableEntityException('You cannot stake with your own referral code');
+        }
         const timestamp = Date.now();
         // const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
         // if (!status) {
@@ -312,9 +312,9 @@ export class ProductsService {
                 const saved = await stakingRepo.save(entity);
                 const referral = new StakingReferralsEntity();
                 referral.staking_referral_id = MyUtils.generateUUID();
-                referral.staking_referral_uid = "nill";
+                referral.staking_referral_uid = referralProfile.uid;
                 referral.staking_referree_uid = uid;
-                referral.staking_referral_staking_id = "nill";
+                referral.staking_referral_staking_id = referralStaking.staking_id;
                 referral.staking_referree_staking_id = saved.staking_id;
                 referral.staking_referral_created_at = BigInt(timestamp);
                 referral.staking_referral_updated_at = BigInt(timestamp);
