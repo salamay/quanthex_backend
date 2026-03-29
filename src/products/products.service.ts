@@ -326,7 +326,6 @@ export class ProductsService {
                 throw new InternalServerErrorException('Failed to create staking');
             }
         })
-        console.log(stakingEntity)
         const notification: NotificationEntity = new NotificationEntity();
         notification.noti_id = MyUtils.generateUUID();
         notification.noti_user = uid;
@@ -350,7 +349,6 @@ export class ProductsService {
                 where: { uid: uid,staking_wallet_address:walletAddress,staking_status:stakingStatus},
                 order:{stake_created_at:"DESC"}
             });
-            console.log(data)
             return data
         }catch(err){
             console.error('Error fetching staking records:', err);
