@@ -21,7 +21,7 @@ import { WithdrawalEntity } from './products/entities/withdrawal_entity';
 import { ReferralEntity } from './users/entities/referral_entity';
 import { NotificationModule } from './notification/notification.module';
 import { NotificationEntity } from './notification/entities/Notification_entity';
-import { StakingReferralsEntity } from './products/entities/staking_referrals';
+import { StakingReferralsEntity } from './users/entities/staking_referrals';
 
 @Module({
   imports: [

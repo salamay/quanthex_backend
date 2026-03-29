@@ -27,7 +27,7 @@ import { ProfileEntity } from 'src/users/entities/profile_entity';
 import { ReferralDto } from 'src/users/dtos/referral_dto';
 import { ProfileMapper } from 'src/users/mapper/profile_mapper';
 import { ReferralEntityMapper } from 'src/utils/mapper/referral_entity_maper';
-import { StakingReferralsEntity } from './entities/staking_referrals';
+import { StakingReferralsEntity } from '../users/entities/staking_referrals';
 
 @Injectable()
 export class ProductsService {
@@ -127,162 +127,7 @@ export class ProductsService {
         }
     }
     
-    
-    async createMiningRecord(uid: string, email: string,payload: SubscriptionPayload, fromSubscriptionId: string):Promise<MiningEntity>{
-        console.log(`Creating mining record for user: ${uid}`);
-        const timestamp = Date.now();
-        return await this.dataSource.transaction(async manager=>{
-           try{
-               const newSub: SubscriptionEntity = await this.createSubscriptionProduct(uid, email, payload, manager);
-               const miningRecord = new MiningEntity();
-               miningRecord.min_id = MyUtils.generateUUID();
-               miningRecord.uid = uid;
-               miningRecord.email = email;
-               miningRecord.min_created_at = BigInt(timestamp);
-               miningRecord.min_updated_at = BigInt(timestamp);
-               miningRecord.min_subscription_id = newSub.sub_id;
-               miningRecord.mining_tag = payload.sub_mining_tag;
-               miningRecord.mining_wallet_hash = payload.sub_wallet_hash;
-               miningRecord.mining_wallet_address = payload.sub_wallet_address;
-               const miningRepo = manager.getRepository(MiningEntity);
-               const miningEntity = await miningRepo.save(miningRecord);
-               const notification: NotificationEntity = new NotificationEntity();
-               notification.noti_id = MyUtils.generateUUID();
-               notification.noti_user = uid;
-               notification.noti_title = 'Mining Created';
-               notification.noti_description = `Your mining has been created successfully`;
-               notification.noti_type = NOTIFICATION_TYPE_MINING;
-               notification.noti_created_at = BigInt(timestamp);
-               notification.noti_updated_at = BigInt(timestamp);
-               notification.noti_seen = false;
-               await this.notificationService.createNotification(notification);
-               this.sendPushNotification(uid, 'Mining Created', `Your mining has been created successfully`, miningEntity);
-               const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
-               if (fromSubscription != null) {
-                   //Referral uid is always from the creator of the subscription
-                   const referralUid = fromSubscription.uid
-                   //Get the path of the subscription
-                   const path: any[] = await this.getPath(fromSubscriptionId)
-                   console.log(`Path for subscription id ${fromSubscriptionId}: ${path}`);
-                   const ref = new ReferralEntity()
-                   ref.referral_id = MyUtils.generateUUID()
-                   ref.referral_uid = referralUid
-                   ref.referree_uid = uid;
-                   ref.referral_subscription_id = fromSubscriptionId;
-                   ref.referree_subscription_id = newSub.sub_id;
-                   ref.referral_created_at = BigInt(Date.now())
-                   ref.referral_updated_at = BigInt(Date.now())
-                   //Set the path of the referral, this is to track the level of the referral in the hierarchy
-                   if (path != null) {
-                    // Add the referral subscription id to the path so as to remember the previous path for the next referral or hierarchy
-                       path.push(fromSubscriptionId);
-                       ref.referral_path = path;
-                       ref.depth = REFERRAL_DEPTH_INDIRECT;
-
-                   } else {
-                    // If there is no path, then this is the first referral or hierarchy so we set the path to the referral subscription id
-                       ref.referral_path = [fromSubscriptionId];
-                       ref.depth = REFERRAL_DEPTH_DIRECT;
-                   }
-                   ref.referral_descendant_uid = uid;
-                   const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
-                   await referralRepository.save(ref)
-                   const referralProfile = await this.userService.getProfileByUid(referralUid)
-                   this.logger.debug(`Referral recorded: ${referralProfile.uid} referred ${uid}`);
-                   const directReferrals = await this.getDirectReferrals(referralProfile.uid, fromSubscription.sub_id)
-                   const totalReferrals = directReferrals.length
-                   this.logger.debug(`User ${referralProfile.uid} now has ${totalReferrals} referrals.`);
-                   const miningRecord = await this.getMining(fromSubscription.sub_id)
-                   if (miningRecord.length > 0) {
-                       this.logger.debug(`Mining records found for user: ${referralProfile.uid}`);
-                       const miningDto = miningRecord.at(0)
-                       if (miningDto != null) {
-                           this.logger.debug(`Changing hash rate for user: ${referralProfile.uid}`);
-                           const hashRate = ProductUtils.getHashRate(totalReferrals, fromSubscription.sub_package_name)
-                           const miningEntity = miningDto.mining
-                           const miningRepo = this.dataSource.getRepository(MiningEntity);
-                           await miningRepo.save(miningEntity);
-                           this.sendPushNotification(referralProfile.uid, 'Hash Rate Updated', `Your hash rate has been updated to ${hashRate}`, miningEntity);
-                           this.logger.debug(`Hash rate updated to ${hashRate} for user: ${referralProfile.uid}`);
-                       } else {
-                           this.logger.debug(`No mining record found for user: ${referralProfile.uid}. No hash rate change applied.`);
-                       }
-                   }
-                   return miningEntity;
-               }
-           }catch(err){
-            console.error('Error creating mining record:', err);
-            throw new InternalServerErrorException('Failed to create mining');
-           }
-        })
-    }
-
-    async createStakingRecord(uid: string, email: string, payload: StakingPayload): Promise<StakingEntity>{
-        console.log(`Creating staking record for user: ${uid}`);
-
-        const referralCode = payload.staking_referral_code
-        if (referralCode == null) {
-            throw new UnprocessableEntityException('Referral code is required');
-        }
-        const referralStaking = await this.getStakingByReferralCode(referralCode)
-        if (referralStaking == null) {
-            throw new UnprocessableEntityException('Staking referral not found');
-        }
-        const referralProfile = await this.userService.getProfileByUid(referralStaking.uid)
-        if (referralProfile == null) {
-            throw new UnprocessableEntityException('Referral profile not found');
-        }
-        if (referralProfile.uid == uid) {
-            throw new UnprocessableEntityException('You cannot stake with your own referral code');
-        }
-        const timestamp = Date.now();
-        // const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
-        // if (!status) {
-        //     throw new UnprocessableEntityException('Transaction submission failed');
-        // }
-      
-        const stakingEntity = await this.dataSource.transaction(async manager=>{
-            try{
-                const staking_id = MyUtils.generateUUID();
-                const data = { ...payload, uid, email, staking_id, } as Partial<StakingEntity>;
-                data.stake_created_at = BigInt(timestamp);
-                data.stake_updated_at = BigInt(timestamp);
-                data.staking_status = Active;
-                data.staking_referral_code = MyUtils.generateLetterCode(9);
-                const stakingRepo = manager.getRepository(StakingEntity);
-                const entity = stakingRepo.create(data as StakingEntity);
-                const saved = await stakingRepo.save(entity);
-                const referral = new StakingReferralsEntity();
-                referral.staking_referral_id = MyUtils.generateUUID();
-                referral.staking_referral_uid = referralProfile.uid;
-                referral.staking_referree_uid = uid;
-                referral.staking_referral_staking_id = referralStaking.staking_id;
-                referral.staking_referree_staking_id = saved.staking_id;
-                referral.staking_referral_created_at = BigInt(timestamp);
-                referral.staking_referral_updated_at = BigInt(timestamp);
-                const referralRepository = manager.getRepository(StakingReferralsEntity);
-                await referralRepository.save(referral);
-                return saved;
-            }catch(err){
-                console.error('Error creating staking record:', err);
-                throw new InternalServerErrorException('Failed to create staking');
-            }
-        })
-        const notification: NotificationEntity = new NotificationEntity();
-        notification.noti_id = MyUtils.generateUUID();
-        notification.noti_user = uid;
-        notification.noti_title = 'Staking Created';
-        notification.noti_description = `Your staking has been created successfully`;
-        notification.noti_type = NOTIFICATION_TYPE_STAKING;
-        notification.noti_created_at = BigInt(timestamp);
-        notification.noti_updated_at = BigInt(timestamp);
-        notification.noti_seen = false;
-        await this.notificationService.createNotification(notification);
-        this.sendPushNotification(uid, 'Staking Created', `Your staking has been created successfully`, stakingEntity);
-
-        return stakingEntity;
-    }
-
+ 
     async getMiningRecords(uid: string, walletAddress: string):Promise<MiningDto[]>{
         console.log(`Fetching mining records for user: ${uid}`);
         const query=`SELECT s.*, m.* FROM subscriptions s 
@@ -341,11 +186,167 @@ export class ProductsService {
         }
 
     }
+
+    async createMiningRecord(uid: string, email: string, payload: SubscriptionPayload, fromSubscriptionId: string): Promise<MiningEntity> {
+        console.log(`Creating mining record for user: ${uid}`);
+        const timestamp = Date.now();
+        return await this.dataSource.transaction(async manager => {
+            try {
+                const newSub: SubscriptionEntity = await this.createSubscriptionProduct(uid, email, payload, manager);
+                const miningRecord = new MiningEntity();
+                miningRecord.min_id = MyUtils.generateUUID();
+                miningRecord.uid = uid;
+                miningRecord.email = email;
+                miningRecord.min_created_at = BigInt(timestamp);
+                miningRecord.min_updated_at = BigInt(timestamp);
+                miningRecord.min_subscription_id = newSub.sub_id;
+                miningRecord.mining_tag = payload.sub_mining_tag;
+                miningRecord.mining_wallet_hash = payload.sub_wallet_hash;
+                miningRecord.mining_wallet_address = payload.sub_wallet_address;
+                const miningRepo = manager.getRepository(MiningEntity);
+                const miningEntity = await miningRepo.save(miningRecord);
+                const notification: NotificationEntity = new NotificationEntity();
+                notification.noti_id = MyUtils.generateUUID();
+                notification.noti_user = uid;
+                notification.noti_title = 'Mining Created';
+                notification.noti_description = `Your mining has been created successfully`;
+                notification.noti_type = NOTIFICATION_TYPE_MINING;
+                notification.noti_created_at = BigInt(timestamp);
+                notification.noti_updated_at = BigInt(timestamp);
+                notification.noti_seen = false;
+                await this.notificationService.createNotification(notification);
+                this.sendPushNotification(uid, 'Mining Created', `Your mining has been created successfully`, miningEntity);
+                const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
+                if (fromSubscription != null) {
+                    //Referral uid is always from the creator of the subscription
+                    const referralUid = fromSubscription.uid
+                    //Get the path of the subscription
+                    const path: any[] = await this.getPath(fromSubscriptionId)
+                    console.log(`Path for subscription id ${fromSubscriptionId}: ${path}`);
+                    const ref = new ReferralEntity()
+                    ref.referral_id = MyUtils.generateUUID()
+                    ref.referral_uid = referralUid
+                    ref.referree_uid = uid;
+                    ref.referral_subscription_id = fromSubscriptionId;
+                    ref.referree_subscription_id = newSub.sub_id;
+                    ref.referral_created_at = BigInt(Date.now())
+                    ref.referral_updated_at = BigInt(Date.now())
+                    //Set the path of the referral, this is to track the level of the referral in the hierarchy
+                    if (path != null) {
+                        // Add the referral subscription id to the path so as to remember the previous path for the next referral or hierarchy
+                        path.push(fromSubscriptionId);
+                        ref.referral_path = path;
+                        ref.depth = REFERRAL_DEPTH_INDIRECT;
+
+                    } else {
+                        // If there is no path, then this is the first referral or hierarchy so we set the path to the referral subscription id
+                        ref.referral_path = [fromSubscriptionId];
+                        ref.depth = REFERRAL_DEPTH_DIRECT;
+                    }
+                    ref.referral_descendant_uid = uid;
+                    const referralRepository = this.dataSource.manager.getRepository(ReferralEntity)
+                    await referralRepository.save(ref)
+                    const referralProfile = await this.userService.getProfileByUid(referralUid)
+                    this.logger.debug(`Referral recorded: ${referralProfile.uid} referred ${uid}`);
+                    const directReferrals = await this.getMiningDirectReferrals(referralProfile.uid, fromSubscription.sub_id)
+                    const totalReferrals = directReferrals.length
+                    this.logger.debug(`User ${referralProfile.uid} now has ${totalReferrals} referrals.`);
+                    const miningRecord = await this.getMining(fromSubscription.sub_id)
+                    if (miningRecord.length > 0) {
+                        this.logger.debug(`Mining records found for user: ${referralProfile.uid}`);
+                        const miningDto = miningRecord.at(0)
+                        if (miningDto != null) {
+                            this.logger.debug(`Changing hash rate for user: ${referralProfile.uid}`);
+                            const hashRate = ProductUtils.getHashRate(totalReferrals, fromSubscription.sub_package_name)
+                            const miningEntity = miningDto.mining
+                            const miningRepo = this.dataSource.getRepository(MiningEntity);
+                            await miningRepo.save(miningEntity);
+                            this.sendPushNotification(referralProfile.uid, 'Hash Rate Updated', `Your hash rate has been updated to ${hashRate}`, miningEntity);
+                            this.logger.debug(`Hash rate updated to ${hashRate} for user: ${referralProfile.uid}`);
+                        } else {
+                            this.logger.debug(`No mining record found for user: ${referralProfile.uid}. No hash rate change applied.`);
+                        }
+                    }
+                    return miningEntity;
+                }
+            } catch (err) {
+                console.error('Error creating mining record:', err);
+                throw new InternalServerErrorException('Failed to create mining');
+            }
+        })
+    }
+
+    async createStakingRecord(uid: string, email: string, payload: StakingPayload): Promise<StakingEntity> {
+        console.log(`Creating staking record for user: ${uid}`);
+        const referralCode = payload.staking_referral_code
+        if (referralCode == null) {
+            throw new UnprocessableEntityException('Referral code is required');
+        }
+        const referralStaking = await this.getStakingByReferralCode(referralCode)
+        if (referralStaking == null) {
+            throw new UnprocessableEntityException('Staking referral not found');
+        }
+        const referralProfile = await this.userService.getProfileByUid(referralStaking.uid)
+        if (referralProfile == null) {
+            throw new UnprocessableEntityException('Referral profile not found');
+        }
+        if (referralProfile.uid == uid) {
+            throw new UnprocessableEntityException('You cannot stake with your own referral code');
+        }
+        const timestamp = Date.now();
+        // const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
+        // if (!status) {
+        //     throw new UnprocessableEntityException('Transaction submission failed');
+        // }
+
+        const stakingEntity = await this.dataSource.transaction(async manager => {
+            try {
+                const staking_id = MyUtils.generateUUID();
+                const data = { ...payload, uid, email, staking_id, } as Partial<StakingEntity>;
+                data.stake_created_at = BigInt(timestamp);
+                data.stake_updated_at = BigInt(timestamp);
+                data.staking_status = Active;
+                data.staking_referral_code = MyUtils.generateLetterCode(9);
+                const stakingRepo = manager.getRepository(StakingEntity);
+                const entity = stakingRepo.create(data as StakingEntity);
+                const saved = await stakingRepo.save(entity);
+                const referral = new StakingReferralsEntity();
+                referral.staking_referral_id = MyUtils.generateUUID();
+                referral.staking_referral_uid = referralProfile.uid;
+                referral.staking_referree_uid = uid;
+                referral.staking_referral_staking_id = referralStaking.staking_id;
+                referral.staking_referree_staking_id = saved.staking_id;
+                referral.staking_referral_created_at = BigInt(timestamp);
+                referral.staking_referral_updated_at = BigInt(timestamp);
+                const referralRepository = manager.getRepository(StakingReferralsEntity);
+                await referralRepository.save(referral);
+                return saved;
+            } catch (err) {
+                console.error('Error creating staking record:', err);
+                throw new InternalServerErrorException('Failed to create staking');
+            }
+        })
+        const notification: NotificationEntity = new NotificationEntity();
+        notification.noti_id = MyUtils.generateUUID();
+        notification.noti_user = uid;
+        notification.noti_title = 'Staking Created';
+        notification.noti_description = `Your staking has been created successfully`;
+        notification.noti_type = NOTIFICATION_TYPE_STAKING;
+        notification.noti_created_at = BigInt(timestamp);
+        notification.noti_updated_at = BigInt(timestamp);
+        notification.noti_seen = false;
+        await this.notificationService.createNotification(notification);
+        this.sendPushNotification(uid, 'Staking Created', `Your staking has been created successfully`, stakingEntity);
+
+        return stakingEntity;
+    }
+
     async getStakingRecords(uid: string, walletAddress: string, stakingStatus: string):Promise<StakingEntity[]>{
         console.log(`Fetching staking records for user: ${uid}`);
         try{
+            console.log(stakingStatus)
             return await this.productsManager.stakingRepo.find({
-                where: { uid: uid,staking_wallet_hash:walletAddress,staking_status:stakingStatus},
+                where: { uid: uid,staking_wallet_address:walletAddress,staking_status:stakingStatus},
                 order:{stake_created_at:"DESC"}
             });
         }catch(err){
@@ -564,6 +565,7 @@ export class ProductsService {
             throw new InternalServerErrorException('Failed to get subscription by id');
         }
     }
+
     async getAllSubscriptionReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
         this.logger.debug("Getting referrals for user ", uid)
         this.logger.debug("Subscription ID: ", subscriptionId)
@@ -585,7 +587,7 @@ export class ProductsService {
         return referrals;
     }
 
-    async getIndirectReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
+    async getMiningIndirectReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
         this.logger.debug("Getting indirect referrals for user ", uid)
         this.logger.debug("Subscription ID: ", subscriptionId)
         const referrals: ReferralDto[] = []
@@ -605,7 +607,8 @@ export class ProductsService {
         }
         return referrals;
     }
-    async getDirectReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
+
+    async getMiningDirectReferrals(uid: string, subscriptionId: string): Promise<ReferralDto[]> {
         this.logger.debug("Getting direct referrals for user ", uid)
         this.logger.debug(`Subscription ID: ${subscriptionId}`)
         const referrals: ReferralDto[] = []

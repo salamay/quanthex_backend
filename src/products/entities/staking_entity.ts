@@ -54,4 +54,5 @@ export class StakingEntity {
     staking_wallet_address:string
     @Column({nullable: false})
     staking_referral_code:string
+    staking_plan: string
 }

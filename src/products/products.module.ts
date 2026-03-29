@@ -15,7 +15,7 @@ import { UserManager } from 'src/users/user_manager';
 import { ReferralEntity } from 'src/users/entities/referral_entity';
 import { ProfileEntity } from 'src/users/entities/profile_entity';
 import { LoggedDevice } from 'src/auth/entities/logged_device';
-import { StakingReferralsEntity } from './entities/staking_referrals';
+import { StakingReferralsEntity } from '../users/entities/staking_referrals';
 
 @Module({
   imports: [

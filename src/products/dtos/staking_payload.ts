@@ -46,5 +46,6 @@ export class StakingPayload {
         staking_wallet_hash: string
         staking_wallet_address: string
         staking_referral_code: string
+        staking_plan: string
       
 }

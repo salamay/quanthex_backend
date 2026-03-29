@@ -73,6 +73,7 @@ export class ProductsController {
     //     }
     //     return await this.productsService.getSubscriptionReferrals(uid, subscriptionId);
     // }
+    
     @Get("subscription-direct-referrals")
     async getSubscriptionDirectReferrals(@Request() req, @Query('subscriptionId') subscriptionId: string): Promise<any> {
         const uid = req.user?.uid;
@@ -80,7 +81,7 @@ export class ProductsController {
         if (!uid) {
             throw new UnauthorizedException('Missing user id on request');
         }
-        return await this.productsService.getDirectReferrals(uid, subscriptionId);
+        return await this.productsService.getMiningDirectReferrals(uid, subscriptionId);
     }
 
     @Get("subscription-indirect-referrals")
@@ -90,7 +91,7 @@ export class ProductsController {
         if (!uid) {
             throw new UnauthorizedException('Missing user id on request');
         }
-        return await this.productsService.getIndirectReferrals(uid, subscriptionId);
+        return await this.productsService.getMiningIndirectReferrals(uid, subscriptionId);
     }
 
     @Get("staking-referrals")
