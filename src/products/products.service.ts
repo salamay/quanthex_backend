@@ -279,20 +279,20 @@ export class ProductsService {
     async createStakingRecord(uid: string, email: string, payload: StakingPayload): Promise<StakingEntity> {
         console.log(`Creating staking record for user: ${uid}`);
         const referralCode = payload.staking_referral_code
-        if (referralCode == null) {
-            throw new UnprocessableEntityException('Referral code is required');
-        }
-        const referralStaking = await this.getStakingByReferralCode(referralCode)
-        if (referralStaking == null) {
-            throw new UnprocessableEntityException('Staking referral not found');
-        }
-        const referralProfile = await this.userService.getProfileByUid(referralStaking.uid)
-        if (referralProfile == null) {
-            throw new UnprocessableEntityException('Referral profile not found');
-        }
-        if (referralProfile.uid == uid) {
-            throw new UnprocessableEntityException('You cannot stake with your own referral code');
-        }
+        // if (referralCode == null) {
+        //     throw new UnprocessableEntityException('Referral code is required');
+        // }
+        // const referralStaking = await this.getStakingByReferralCode(referralCode)
+        // if (referralStaking == null) {
+        //     throw new UnprocessableEntityException('Staking referral not found');
+        // }
+        // const referralProfile = await this.userService.getProfileByUid(referralStaking.uid)
+        // if (referralProfile == null) {
+        //     throw new UnprocessableEntityException('Referral profile not found');
+        // }
+        // if (referralProfile.uid == uid) {
+        //     throw new UnprocessableEntityException('You cannot stake with your own referral code');
+        // }
         const timestamp = Date.now();
         // const status: Boolean = await this.submitTransaction(uid, payload.signed_tx, payload.rpc)
         // if (!status) {
