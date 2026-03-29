@@ -302,13 +302,13 @@ export class ProductsService {
         const stakingEntity = await this.dataSource.transaction(async manager => {
             try {
                 const staking_id = MyUtils.generateUUID();
-                const data = { ...payload, uid, email, staking_id, } as Partial<StakingEntity>;
+                const data = { ...payload, uid, email, staking_id, } as StakingEntity;
                 data.stake_created_at = BigInt(timestamp);
                 data.stake_updated_at = BigInt(timestamp);
                 data.staking_status = Active;
                 data.staking_referral_code = MyUtils.generateLetterCode(9);
                 const stakingRepo = manager.getRepository(StakingEntity);
-                const entity = stakingRepo.create(data as StakingEntity);
+                const entity = stakingRepo.create(data);
                 const saved = await stakingRepo.save(entity);
                 const referral = new StakingReferralsEntity();
                 referral.staking_referral_id = MyUtils.generateUUID();
@@ -326,6 +326,7 @@ export class ProductsService {
                 throw new InternalServerErrorException('Failed to create staking');
             }
         })
+        console.log(stakingEntity)
         const notification: NotificationEntity = new NotificationEntity();
         notification.noti_id = MyUtils.generateUUID();
         notification.noti_user = uid;
@@ -345,10 +346,12 @@ export class ProductsService {
         console.log(`Fetching staking records for user: ${uid}`);
         try{
             console.log(stakingStatus)
-            return await this.productsManager.stakingRepo.find({
+            const data:StakingEntity[]= await this.productsManager.stakingRepo.find({
                 where: { uid: uid,staking_wallet_address:walletAddress,staking_status:stakingStatus},
                 order:{stake_created_at:"DESC"}
             });
+            console.log(data)
+            return data
         }catch(err){
             console.error('Error fetching staking records:', err);
             throw new InternalServerErrorException('Failed to fetch staking records');

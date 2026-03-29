@@ -7,6 +7,9 @@ async function bootstrap() {
   (BigInt.prototype as any).toJSON = function () {
     return this.toString();
   };
+  (BigInt.prototype as any).toJSON = function () {
+    return this.toString();
+  };
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('v1/api');
   app.useGlobalGuards(new JwtAuthGuard());
