@@ -5,9 +5,9 @@ export class StakingPayload {
         
         email: string
         
-        stake_created_at: BigInt
+        stake_created_at: string
         
-        stake_updated_at: BigInt
+        stake_updated_at: string
         
         staked_asset_symbol: string
         
@@ -40,9 +40,9 @@ export class StakingPayload {
         staking_reward_asset_image: string
         signed_tx: string
         rpc: string
-        duration: BigInt
-        end_date: BigInt
-        start_date: BigInt
+        duration: string
+        end_date: string
+        start_date: string
         staking_wallet_hash: string
         staking_wallet_address: string
         staking_referral_code: string

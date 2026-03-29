@@ -303,8 +303,8 @@ export class ProductsService {
             try {
                 const staking_id = MyUtils.generateUUID();
                 const data = { ...payload, uid, email, staking_id, } as StakingEntity;
-                data.stake_created_at = BigInt(timestamp);
-                data.stake_updated_at = BigInt(timestamp);
+                data.stake_created_at = timestamp.toString();
+                data.stake_updated_at = timestamp.toString();
                 data.staking_status = Active;
                 data.staking_referral_code = MyUtils.generateLetterCode(9);
                 const stakingRepo = manager.getRepository(StakingEntity);

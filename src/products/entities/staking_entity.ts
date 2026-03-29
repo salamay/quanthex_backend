@@ -9,9 +9,9 @@ export class StakingEntity {
     @Column()
     email: string
     @Column({ nullable: false, type: 'bigint' })
-    stake_created_at: BigInt
+    stake_created_at: string
     @Column({ nullable: false, type: 'bigint' })
-    stake_updated_at: BigInt
+    stake_updated_at: string
     @Column()
     staked_asset_symbol: string
     @Column()
@@ -43,11 +43,11 @@ export class StakingEntity {
     @Column()
     staking_reward_asset_image: string
     @Column({ nullable: false, type: 'bigint' })
-    duration: BigInt
+    duration: string
     @Column({ nullable: false, type: 'bigint' })
-    end_date: BigInt
+    end_date: string
     @Column({ nullable: false, type: 'bigint' })
-    start_date: BigInt
+    start_date: string
     @Column()
     staking_wallet_hash:string
     @Column()
