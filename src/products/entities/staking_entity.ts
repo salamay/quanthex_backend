@@ -43,11 +43,11 @@ export class StakingEntity {
     @Column()
     staking_reward_asset_image: string
     @Column({ nullable: false, type: 'bigint' })
-    duration: number
+    duration: BigInt
     @Column({ nullable: false, type: 'bigint' })
-    end_date: number
+    end_date: BigInt
     @Column({ nullable: false, type: 'bigint' })
-    start_date: number
+    start_date: BigInt
     @Column()
     staking_wallet_hash:string
     @Column()

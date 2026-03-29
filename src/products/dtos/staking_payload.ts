@@ -40,9 +40,9 @@ export class StakingPayload {
         staking_reward_asset_image: string
         signed_tx: string
         rpc: string
-        duration: number
-        end_date: number
-        start_date: number
+        duration: BigInt
+        end_date: BigInt
+        start_date: BigInt
         staking_wallet_hash: string
         staking_wallet_address: string
         staking_referral_code: string
