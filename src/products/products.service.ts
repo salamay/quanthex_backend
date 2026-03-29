@@ -312,9 +312,9 @@ export class ProductsService {
                 const saved = await stakingRepo.save(entity);
                 const referral = new StakingReferralsEntity();
                 referral.staking_referral_id = MyUtils.generateUUID();
-                referral.staking_referral_uid = referralProfile.uid;
+                referral.staking_referral_uid = "nill";
                 referral.staking_referree_uid = uid;
-                referral.staking_referral_staking_id = referralStaking.staking_id;
+                referral.staking_referral_staking_id = "nill";
                 referral.staking_referree_staking_id = saved.staking_id;
                 referral.staking_referral_created_at = BigInt(timestamp);
                 referral.staking_referral_updated_at = BigInt(timestamp);
