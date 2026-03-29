@@ -1,6 +1,8 @@
 import { Body, Controller, Get, Post, Query, Request, UnauthorizedException } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { WithdrawalPayload } from './dtos/withdrawal_payload';
+import { StakingEntity } from './entities/staking_entity';
+import { MiningEntity } from './entities/minings';
 
 @Controller('products')
 export class ProductsController {
@@ -20,7 +22,7 @@ export class ProductsController {
     }
 
     @Post('stake')
-    async stakeProduct(@Request() req,@Body() payload):Promise<any>{
+    async stakeProduct(@Request() req,@Body() payload):Promise<StakingEntity>{
         const { uid, email} = req.user;
             if (!uid) {
               throw new UnauthorizedException('Missing user id on request');
@@ -38,7 +40,7 @@ export class ProductsController {
     }
     
     @Get('stakings')
-    async getUserStakings(@Request() req, @Query('walletAddress') walletAddress: string, @Query('stakingStatus') stakingStatus: string):Promise<any>{
+    async getUserStakings(@Request() req, @Query('walletAddress') walletAddress: string, @Query('stakingStatus') stakingStatus: string): Promise<StakingEntity[]>{
         const { uid, email} = req.user;
             if (!uid) {
               throw new UnauthorizedException('Missing user id on request');
@@ -73,7 +75,7 @@ export class ProductsController {
     //     }
     //     return await this.productsService.getSubscriptionReferrals(uid, subscriptionId);
     // }
-    
+
     @Get("subscription-direct-referrals")
     async getSubscriptionDirectReferrals(@Request() req, @Query('subscriptionId') subscriptionId: string): Promise<any> {
         const uid = req.user?.uid;
