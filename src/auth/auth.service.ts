@@ -83,6 +83,7 @@ export class AuthService {
             const loggedDeviceRepo=manager.getRepository(LoggedDevice);
             await loggedDeviceRepo.save(loggedDevice);
            
+            
             setImmediate(() => {
                 this.pushService.sendToToken(
                     registerDto.device_token,
