@@ -23,6 +23,7 @@ export class EmailApiService {
 
   async sendOtpEmail(to: string, subject: string, otp: string){
     try {
+      setImmediate(async () => {
         const res = await this.resend.emails.send({
             from: this.from,
             to: to,
@@ -35,6 +36,7 @@ export class EmailApiService {
             }
         });
         console.log(res);
+      });
     } catch (err) {
       this.logger.error('Failed to send email', err as any);
       throw err;
