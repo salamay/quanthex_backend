@@ -35,7 +35,6 @@ export class EmailApiService {
               },
             }
         });
-        console.log(res);
       });
     } catch (err) {
       this.logger.error('Failed to send email', err as any);
