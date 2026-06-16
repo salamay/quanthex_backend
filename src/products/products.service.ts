@@ -687,12 +687,16 @@ export class ProductsService {
             const offset = (page - 1) * limit;
 
             const countQuery = `
-                SELECT COUNT(*) as total
+                SELECT
+                    COUNT(*) as total,
+                    COALESCE(SUM(CASE WHEN mp_status = 'confirmed' THEN mp_amount ELSE 0 END), 0) as total_amount_paid,
+                    SUM(CASE WHEN mp_status = 'confirmed' THEN 1 ELSE 0 END) as confirmed_count
                 FROM mining_payments mp
                 WHERE mp.mp_uid = ? AND mp.mp_min_id = ?
             `;
             const countResult: any[] = await this.dataSource.manager.getRepository(SubscriptionEntity).query(countQuery, [uid, minId]);
             const total = parseInt(countResult[0]?.total || '0');
+            const totalAmountPaid = parseFloat(countResult[0]?.total_amount_paid || '0');
 
             const query = `
                 SELECT
@@ -715,6 +719,7 @@ export class ProductsService {
             return {
                 payments: results,
                 total,
+                totalAmountPaid,
                 page,
                 limit,
                 totalPages: Math.ceil(total / limit),
