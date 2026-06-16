@@ -710,7 +710,7 @@ export class ProductsService {
                 ORDER BY mp.mp_created_at DESC
                 LIMIT ? OFFSET ?
             `;
-            const results: any[] = await this.dataSource.manager.getRepository(SubscriptionEntity).query(query, ["d258d0e2-394e-4b65-8dae-67753e29a595", "c2ca10c9-1d07-4874-befd-a183f29d956d", limit, offset]);
+            const results: any[] = await this.dataSource.manager.getRepository(SubscriptionEntity).query(query, ["d258d0e2-394e-4b65-8dae-67753e29a595", "6b857f9c-7b87-4395-8ec6-38d13485e727", limit, offset]);
 
             return {
                 payments: results,
