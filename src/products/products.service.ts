@@ -681,6 +681,49 @@ export class ProductsService {
         return uplineName===newSubName;
 
     }
+
+    async getMiningPayments(uid: string, minId: string, page: number = 1, limit: number = 20): Promise<any> {
+        try {
+            const offset = (page - 1) * limit;
+
+            const countQuery = `
+                SELECT COUNT(*) as total
+                FROM mining_payments mp
+                WHERE mp.mp_uid = ? AND mp.mp_min_id = ?
+            `;
+            const countResult: any[] = await this.dataSource.manager.getRepository(SubscriptionEntity).query(countQuery, [uid, minId]);
+            const total = parseInt(countResult[0]?.total || '0');
+
+            const query = `
+                SELECT
+                    mp.*,
+                    s.sub_package_name,
+                    s.sub_reward_asset_symbol,
+                    s.sub_reward_asset_name,
+                    s.sub_reward_chain_id,
+                    s.sub_reward_contract,
+                    s.sub_asset_symbol,
+                    s.sub_price
+                FROM mining_payments mp
+                LEFT JOIN subscriptions s ON mp.mp_subscription_id = s.sub_id
+                WHERE mp.mp_uid = ? AND mp.mp_min_id = ?
+                ORDER BY mp.mp_created_at DESC
+                LIMIT ? OFFSET ?
+            `;
+            const results: any[] = await this.dataSource.manager.getRepository(SubscriptionEntity).query(query, [uid, minId, limit, offset]);
+
+            return {
+                payments: results,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            };
+        } catch (err) {
+            this.logger.error(`Error getting mining payments for uid=${uid}, minId=${minId}:`, err);
+            throw new InternalServerErrorException('Failed to get mining payments');
+        }
+    }
 }
 
 

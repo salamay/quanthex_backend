@@ -96,6 +96,20 @@ export class ProductsController {
         return await this.productsService.getMiningIndirectReferrals(uid, subscriptionId);
     }
 
+    @Get('mining-payments')
+    async getMiningPayments(
+        @Request() req,
+        @Query('minId') minId: string,
+        @Query('page') page: string = '1',
+        @Query('limit') limit: string = '20',
+    ): Promise<any> {
+        const uid = req.user?.uid;
+        if (!uid) {
+            throw new UnauthorizedException('Missing user id on request');
+        }
+        return await this.productsService.getMiningPayments(uid, minId, parseInt(page), parseInt(limit));
+    }
+
     @Get("staking-referrals")
     async getStakingReferrals(@Request() req, @Query('stakingId') stakingId: string): Promise<any> {
         const uid = req.user?.uid;

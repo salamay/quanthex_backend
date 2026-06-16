@@ -41,7 +41,8 @@ import { StakingReferralsEntity } from './users/entities/staking_referrals';
         database: configService.get<string>('DB_NAME'),
         bigNumberStrings: true,
         entities:[                
-          UserEntity, ProfileEntity, LoggedDevice, SubscriptionEntity, MiningEntity, StakingEntity, WithdrawalEntity, ReferralEntity, StakingReferralsEntity, NotificationEntity
+          UserEntity, ProfileEntity, LoggedDevice, SubscriptionEntity, MiningEntity,
+           StakingEntity, WithdrawalEntity, ReferralEntity, StakingReferralsEntity, NotificationEntity
         ],
         synchronize: false,
       })
