@@ -497,6 +497,7 @@ export class ProductsService {
             } catch (err) {
                 console.error(`Error submitting transaction (attempt ${attempt}):`, err);
                 provider.destroy
+                throw new InternalServerErrorException('Transaction submission failed: ' + err);
             }
 
             if (attempt < maxAttempts) {

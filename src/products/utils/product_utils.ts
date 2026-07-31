@@ -1,4 +1,4 @@
-import { ADVANCE, GROWTH, MEGA, PRO, STARTER } from "src/utils/product_constants"
+import { ADVANCE, GROWTH, MEGA, PRO, STARTER, BOOST } from "src/utils/product_constants"
 
 export class ProductUtils {
 
@@ -8,11 +8,12 @@ export class ProductUtils {
     static LEVEL_THREE_HASHRATE=563696.961
     static LEVEL_FOUR_HASHRATE=751595.948
 
-    static starterFactor = 1.00
-    static growthFactor = 2.00
-    static advanceFactor = 3.00
-    static proFactor = 4.00
-    static megaFactor = 5.00
+    static starterFactor = 0.2
+    static boostFactor=0.25
+    static growthFactor = 0.3
+    static advanceFactor = 0.4
+    static proFactor = 0.5
+    static megaFactor = 0.6
     
     // static LEVEL_FIVE_HASHRATE=939494.935
     // static LEVEL_SIX_HASHRATE=1127393.923
@@ -21,7 +22,9 @@ export class ProductUtils {
         let factor = 1.0;
         if (packageName == STARTER){
             factor = this.starterFactor;
-        }else if(packageName == GROWTH){
+        } else if (packageName == BOOST) {
+            factor = this.boostFactor;
+        } else if(packageName == GROWTH){
             factor = this.growthFactor;
         }else if(packageName == ADVANCE){
             factor = this.advanceFactor;
