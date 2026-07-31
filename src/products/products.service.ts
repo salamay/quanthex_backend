@@ -58,20 +58,20 @@ export class ProductsService {
         // }
 
 
-        const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
-        if (fromSubscription == null) {
-            throw new UnprocessableEntityException('Subscription not found');
-        }
-        if (fromSubscription.sub_status !== Active){
-            throw new UnprocessableEntityException('Subscription is not active');
-        }
-        if (!this.checkIfProductIsSame(fromSubscription.sub_package_name, payload.sub_package_name)) {
-            throw new UnprocessableEntityException(`You cannot subscribe to a different product, please use the same product as your upline: ${fromSubscription.sub_package_name}`);
-        }
-        const walletExists = await this.checkIfWalletExistsInSub(payload.sub_wallet_hash)
-        if (walletExists) {
-            throw new UnprocessableEntityException('Wallet already in use, please use a different wallet');
-        }
+        // const fromSubscription: SubscriptionEntity = await this.getSubscriptionByMiningTag(payload.sub_referral_code)
+        // if (fromSubscription == null) {
+        //     throw new UnprocessableEntityException('Subscription not found');
+        // }
+        // if (fromSubscription.sub_status !== Active){
+        //     throw new UnprocessableEntityException('Subscription is not active');
+        // }
+        // if (!this.checkIfProductIsSame(fromSubscription.sub_package_name, payload.sub_package_name)) {
+        //     throw new UnprocessableEntityException(`You cannot subscribe to a different product, please use the same product as your upline: ${fromSubscription.sub_package_name}`);
+        // }
+        // const walletExists = await this.checkIfWalletExistsInSub(payload.sub_wallet_hash)
+        // if (walletExists) {
+        //     throw new UnprocessableEntityException('Wallet already in use, please use a different wallet');
+        // }
         // const hasReferred = await this.hasReferredSomeone(fromSubscription.uid, uid);
         // if (hasReferred) {
         //     throw new UnprocessableEntityException('You have already referred this user or you have this user as your descendant');
@@ -87,7 +87,7 @@ export class ProductsService {
         //     throw new UnprocessableEntityException('Transaction submission failed');
         // }
         payload.email = email;
-        return await this.createMiningRecord(uid, email, payload, fromSubscription.sub_id);
+        return await this.createMiningRecord(uid, email, payload, "");
     }
 
     /**
